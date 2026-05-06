@@ -70,7 +70,6 @@
 ### 本地使用
 1. 克隆仓库到本地：
    git clone https://github.com/1609106786/tree-algorithms.git
-   cd tree-algorithms
 2. 直接用浏览器打开 `index.html` 即可。
 
 ### 部署为静态网站
