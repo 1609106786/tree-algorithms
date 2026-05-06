@@ -97,9 +97,9 @@
 
 ## 📂 项目结构
 
-tree-algorithms/
-├── index.html          # 主页面，包含全部 HTML/CSS/JS
-└── README.md           # 你正在阅读的文档
+### tree-algorithms/
+### ├── index.html          # 主页面，包含全部 HTML/CSS/JS
+### └── README.md           # 你正在阅读的文档
 ---
 
 ## 📜 许可证
