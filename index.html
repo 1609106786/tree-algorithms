@@ -1,0 +1,2380 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>树结构算法 · 交互式可视化三部曲</title>
+    <style>
+        :root {
+            --bg: #f8fafb;
+            --card-bg: #ffffff;
+            --text: #2c3e50;
+            --text-secondary: #5a6c7d;
+            --border: #e2e8f0;
+            --accent: #5b6af0;
+            --accent-light: #eef0ff;
+            --accent-hover: #4a56d4;
+            --accent2: #7c3aed;
+            --accent2-light: #f5f0ff;
+            --leaf-color: #48b89e;
+            --leaf-light: #e6f7f2;
+            --internal-color: #5b8def;
+            --internal-light: #eaf2fd;
+            --highlight-color: #f59e3b;
+            --highlight-light: #fef5e9;
+            --merge-color: #ef5b7b;
+            --merge-light: #fde8ed;
+            --thread-color: #ec4899;
+            --thread-light: #fdf2f8;
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+            --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.10);
+            --radius-sm: 8px;
+            --radius-md: 14px;
+            --radius-lg: 20px;
+            --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #f0f4f8 0%, #e8edf3 30%, #f5f7fa 60%, #eef1f5 100%);
+            background-attachment: fixed;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 20px 14px;
+            color: var(--text);
+            -webkit-font-smoothing: antialiased;
+        }
+        .app-container {
+            width: 100%;
+            max-width: 1150px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* 顶部标题栏 */
+        .header {
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            padding: 18px 24px;
+            box-shadow: var(--shadow-md);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
+            border: 1px solid var(--border);
+        }
+        .header-icon {
+            width: 46px;
+            height: 46px;
+            border-radius: 13px;
+            background: linear-gradient(135deg, #5b6af0, #7c8cf8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #fff;
+            flex-shrink: 0;
+            box-shadow: 0 4px 14px rgba(91, 106, 240, 0.3);
+        }
+        .header-info h1 {
+            font-size: 1.45rem;
+            font-weight: 700;
+            color: #1a1f2e;
+            letter-spacing: -0.01em;
+            line-height: 1.2;
+        }
+        .header-info p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        /* Tab导航 */
+        .tab-nav {
+            display: flex;
+            gap: 4px;
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            padding: 6px;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border);
+            flex-wrap: wrap;
+        }
+        .tab-btn {
+            flex: 1;
+            min-width: 140px;
+            padding: 13px 18px;
+            border-radius: 16px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.9rem;
+            transition: var(--transition);
+            color: var(--text-secondary);
+            white-space: nowrap;
+            letter-spacing: 0.01em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .tab-btn:hover {
+            background: #f5f6f8;
+            color: var(--text);
+        }
+        .tab-btn.active {
+            background: var(--accent);
+            color: #fff;
+            box-shadow: 0 3px 14px rgba(91, 106, 240, 0.3);
+        }
+        .tab-btn:nth-child(2).active {
+            background: #48b89e;
+            box-shadow: 0 3px 14px rgba(72, 184, 158, 0.3);
+        }
+        .tab-btn:nth-child(3).active {
+            background: #7c3aed;
+            box-shadow: 0 3px 14px rgba(124, 58, 237, 0.3);
+        }
+
+        /* 内容面板 */
+        .tab-panel {
+            display: none;
+        }
+        .tab-panel.active {
+            display: block;
+        }
+        .main-content {
+            display: flex;
+            gap: 18px;
+            flex-wrap: wrap;
+        }
+        .side-panel {
+            flex: 0 0 310px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            min-width: 270px;
+        }
+        @media (max-width: 900px) {
+            .side-panel {
+                flex: 1 1 100%;
+                min-width: auto;
+            }
+            .main-content {
+                flex-direction: column;
+            }
+        }
+        .panel-card {
+            background: var(--card-bg);
+            border-radius: var(--radius-md);
+            padding: 18px 20px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border);
+            transition: var(--transition);
+        }
+        .panel-card:hover {
+            box-shadow: var(--shadow-md);
+        }
+        .panel-card h3 {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #1a1f2e;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: 0.01em;
+        }
+        .panel-card h3 .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .preset-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 7px;
+        }
+        .preset-btn {
+            padding: 8px 13px;
+            border-radius: 20px;
+            border: 2px solid var(--border);
+            background: #fff;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+            transition: var(--transition);
+            color: var(--text);
+            white-space: nowrap;
+            letter-spacing: 0.01em;
+        }
+        .preset-btn:hover {
+            border-color: var(--accent);
+            background: var(--accent-light);
+            color: var(--accent);
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(91, 106, 240, 0.1);
+        }
+        .preset-btn.active {
+            border-color: var(--accent);
+            background: var(--accent);
+            color: #fff;
+            box-shadow: 0 3px 12px rgba(91, 106, 240, 0.22);
+        }
+        .custom-input-row {
+            display: flex;
+            gap: 8px;
+            align-items: stretch;
+        }
+        .custom-input {
+            flex: 1;
+            padding: 9px 13px;
+            border-radius: 20px;
+            border: 2px solid var(--border);
+            font-size: 0.8rem;
+            font-family: 'SF Mono', 'Cascadia Code', 'Consolas', 'PingFang SC', monospace;
+            transition: var(--transition);
+            background: #fafbfc;
+            color: var(--text);
+            min-width: 0;
+        }
+        .custom-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px rgba(91, 106, 240, 0.07);
+            background: #fff;
+        }
+        .btn-apply {
+            padding: 9px 16px;
+            border-radius: 20px;
+            border: none;
+            background: var(--accent);
+            color: #fff;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.8rem;
+            transition: var(--transition);
+            white-space: nowrap;
+            letter-spacing: 0.02em;
+        }
+        .btn-apply:hover {
+            background: var(--accent-hover);
+            box-shadow: 0 4px 14px rgba(91, 106, 240, 0.3);
+            transform: translateY(-1px);
+        }
+        .step-info {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            padding: 10px 13px;
+            background: #fafbfc;
+            border-radius: 10px;
+            border: 1px solid #eef1f5;
+            min-height: 44px;
+        }
+        .step-info strong {
+            color: var(--accent);
+        }
+        .canvas-panel {
+            flex: 1;
+            min-width: 380px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        @media (max-width: 900px) {
+            .canvas-panel {
+                min-width: auto;
+            }
+        }
+        .canvas-card {
+            background: var(--card-bg);
+            border-radius: var(--radius-md);
+            padding: 14px;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border);
+            position: relative;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 430px;
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+        }
+        .canvas-badge {
+            position: absolute;
+            top: 12px;
+            right: 16px;
+            background: #f8fafb;
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 4px 11px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            letter-spacing: 0.03em;
+            pointer-events: none;
+            z-index: 5;
+        }
+        .control-bar {
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            padding: 14px 18px;
+            box-shadow: var(--shadow-md);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            border: 1px solid var(--border);
+            justify-content: center;
+        }
+        .ctrl-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            background: #fff;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text);
+            flex-shrink: 0;
+        }
+        .ctrl-btn:hover:not(:disabled) {
+            border-color: var(--accent);
+            background: var(--accent-light);
+            color: var(--accent);
+            box-shadow: 0 3px 10px rgba(91, 106, 240, 0.13);
+            transform: translateY(-1px);
+        }
+        .ctrl-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            background: #f5f6f8;
+        }
+        .ctrl-btn.play-btn {
+            width: 44px;
+            height: 44px;
+            font-size: 1.3rem;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            box-shadow: 0 4px 14px rgba(91, 106, 240, 0.3);
+        }
+        .ctrl-btn.play-btn:hover:not(:disabled) {
+            background: var(--accent-hover);
+            box-shadow: 0 6px 20px rgba(91, 106, 240, 0.4);
+            color: #fff;
+        }
+        .ctrl-btn.play-btn.playing {
+            background: #ef5b7b;
+            box-shadow: 0 4px 14px rgba(239, 91, 123, 0.35);
+            animation: pulse-play 1.8s ease-in-out infinite;
+        }
+        @keyframes pulse-play {
+            0%,
+            100% {
+                box-shadow: 0 4px 14px rgba(239, 91, 123, 0.35);
+            }
+            50% {
+                box-shadow: 0 4px 26px rgba(239, 91, 123, 0.6);
+            }
+        }
+        .step-progress {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            letter-spacing: 0.02em;
+            flex-shrink: 0;
+        }
+        .step-dots {
+            display: flex;
+            gap: 3px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 150px;
+            overflow-x: auto;
+        }
+        .step-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #dce3eb;
+            transition: var(--transition);
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .step-dot.active {
+            background: var(--accent);
+            box-shadow: 0 0 8px rgba(91, 106, 240, 0.4);
+            transform: scale(1.4);
+        }
+        .step-dot.visited {
+            background: #b0bfd4;
+        }
+        .speed-selector {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        .speed-selector select {
+            padding: 5px 9px;
+            border-radius: 14px;
+            border: 2px solid var(--border);
+            font-size: 0.75rem;
+            background: #fff;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text);
+            transition: var(--transition);
+        }
+        .speed-selector select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-120px);
+            background: #1a1f2e;
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 28px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            z-index: 1000;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.2);
+        }
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+        .order-selector-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .order-selector-row label {
+            font-weight: 600;
+            font-size: 0.82rem;
+            white-space: nowrap;
+        }
+        .order-selector-row select {
+            padding: 7px 12px;
+            border-radius: 18px;
+            border: 2px solid var(--border);
+            font-size: 0.82rem;
+            background: #fff;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text);
+            transition: var(--transition);
+        }
+        .order-hint {
+            font-size: 0.72rem;
+            color: #9aa8b8;
+            margin-top: 4px;
+        }
+        .code-table-wrap {
+            max-height: 200px;
+            overflow-y: auto;
+            border-radius: 10px;
+            border: 1px solid #eef1f5;
+            scrollbar-width: thin;
+        }
+        .code-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+        .code-table th,
+        .code-table td {
+            padding: 7px 10px;
+            text-align: center;
+            border-bottom: 1px solid #f2f4f7;
+        }
+        .code-table th {
+            background: #f8fafb;
+            font-weight: 700;
+            color: #4a5568;
+            font-size: 0.73rem;
+            position: sticky;
+            top: 0;
+        }
+        .code-bits {
+            font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+            letter-spacing: 0.05em;
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 0.78rem;
+        }
+        .thread-type-selector {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+        .type-btn {
+            padding: 7px 12px;
+            border-radius: 18px;
+            border: 2px solid var(--border);
+            background: #fff;
+            cursor: pointer;
+            font-size: 0.78rem;
+            font-weight: 600;
+            transition: var(--transition);
+            color: var(--text);
+        }
+        .type-btn.active {
+            border-color: #6366f1;
+            background: #6366f1;
+            color: #fff;
+        }
+        .legend-mini {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            align-items: center;
+        }
+        .legend-line {
+            display: inline-block;
+            width: 16px;
+            height: 2px;
+            border-radius: 1px;
+        }
+        .legend-line.solid {
+            background: #94a3b8;
+        }
+        .legend-line.dashed {
+            background: transparent;
+            border-top: 2px dashed #ec4899;
+            height: 0;
+        }
+        @media (max-width: 700px) {
+            .header {
+                padding: 12px 16px;
+                gap: 8px;
+            }
+            .header-icon {
+                width: 34px;
+                height: 34px;
+                font-size: 18px;
+                border-radius: 9px;
+            }
+            .header-info h1 {
+                font-size: 1.1rem;
+            }
+            .canvas-card {
+                min-height: 320px;
+                padding: 6px;
+            }
+            .ctrl-btn {
+                width: 30px;
+                height: 30px;
+                font-size: 0.8rem;
+            }
+            .ctrl-btn.play-btn {
+                width: 36px;
+                height: 36px;
+                font-size: 1rem;
+            }
+            .tab-btn {
+                padding: 10px 12px;
+                font-size: 0.78rem;
+                min-width: 100px;
+            }
+            .side-panel {
+                flex: 1 1 100%;
+            }
+            .control-bar {
+                gap: 5px;
+                padding: 10px 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- 顶部标题 -->
+        <div class="header">
+            <div class="header-icon">🌲</div>
+            <div class="header-info">
+                <h1>树结构算法 · 交互式可视化三部曲</h1>
+                <p>B树构建 · 哈夫曼编码 · 线索二叉树 — 逐步展示经典树结构的构建与操作过程</p>
+            </div>
+        </div>
+
+        <!-- Tab导航 -->
+        <div class="tab-nav" id="tabNav">
+            <button class="tab-btn active" data-tab="0">📊 B树构建</button>
+            <button class="tab-btn" data-tab="1">🌳 哈夫曼树</button>
+            <button class="tab-btn" data-tab="2">🧵 线索二叉树</button>
+        </div>
+
+        <!-- ==================== Tab 0: B树 ==================== -->
+        <div class="tab-panel active" id="tabPanel0">
+            <div class="main-content">
+                <div class="side-panel">
+                    <div class="panel-card">
+                        <h3><span class="dot" style="background:#5b6af0;"></span>预设插入序列</h3>
+                        <div class="preset-buttons" id="btreePresetButtons">
+                            <button class="preset-btn active" data-preset="0">📈 升序插入</button>
+                            <button class="preset-btn" data-preset="1">🔀 随机序列A</button>
+                            <button class="preset-btn" data-preset="2">🎯 交替模式</button>
+                            <button class="preset-btn" data-preset="3">📊 密集插入</button>
+                        </div>
+                    </div>
+                    <div class="panel-card">
+                        <h3><span class="dot" style="background:#48b89e;"></span>自定义序列</h3>
+                        <div class="custom-input-row">
+                            <input type="text" class="custom-input" id="btreeCustomInput" placeholder="如: 10,20,5,15,25,8">
+                            <button class="btn-apply" id="btreeBtnApply">✓ 应用</button>
+                        </div>
+                        <div style="font-size:0.7rem;color:#9aa8b8;margin-top:6px;">整数键值，逗号或空格分隔</div>
+                    </div>
+                    <div class="panel-card">
+                        <h3><span class="dot" style="background:#f59e3b;"></span>B树阶数</h3>
+                        <div class="order-selector-row">
+                            <label for="btreeOrderSelect">阶数：</label>
+                            <select id="btreeOrderSelect">
+                                <option value="3">3阶(2-3树)</option>
+                                <option value="4" selected>4阶(2-3-4树)</option>
+                                <option value="5">5阶</option>
+                                <option value="6">6阶</option>
+                                <option value="7">7阶</option>
+                            </select>
+                        </div>
+                        <div class="order-hint" id="btreeOrderHint">最多3键/节点·最多4子节点·最少1键/节点(非根)</div>
+                    </div>
+                    <div class="panel-card">
+                        <h3>📝 当前步骤</h3>
+                        <div class="step-info" id="btreeStepDesc">准备开始构建B树...</div>
+                    </div>
+                    <div class="panel-card">
+                        <h3>📋 树属性</h3>
+                        <div class="step-info" id="btreeTreeInfo">等待数据加载...</div>
+                    </div>
+                </div>
+                <div class="canvas-panel">
+                    <div class="canvas-card" id="btreeCanvasCard">
+                        <canvas id="btreeCanvas"></canvas>
+                        <div class="canvas-badge" id="btreeCanvasBadge">空树</div>
+                    </div>
+                    <div class="control-bar">
+                        <button class="ctrl-btn" id="btreeBtnFirst" title="第一步">⏮</button>
+                        <button class="ctrl-btn" id="btreeBtnPrev" title="上一步">◀</button>
+                        <button class="ctrl-btn play-btn" id="btreeBtnPlay" title="播放">▶</button>
+                        <button class="ctrl-btn" id="btreeBtnNext" title="下一步">▶</button>
+                        <button class="ctrl-btn" id="btreeBtnLast" title="最后">⏭</button>
+                        <button class="ctrl-btn" id="btreeBtnReset" title="重置">↺</button>
+                        <span class="step-progress" id="btreeStepProgress">步骤 0/0</span>
+                        <div class="step-dots" id="btreeStepDots"></div>
+                        <div class="speed-selector">
+                            <span>速度</span>
+                            <select id="btreeSpeedSelect">
+                                <option value="300">快⚡</option>
+                                <option value="650" selected>中▶</option>
+                                <option value="1200">慢🐢</option>
+                                <option value="2200">极慢🦥</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== Tab 1: 哈夫曼树 ==================== -->
+        <div class="tab-panel" id="tabPanel1">
+            <div class="main-content">
+                <div class="side-panel">
+                    <div class="panel-card">
+                        <h3><span class="dot" style="background:#5b6af0;"></span>预设数据集</h3>
+                        <div class="preset-buttons" id="huffPresetButtons">
+                            <button class="preset-btn active" data-preset="0">📖 经典示例</button>
+                            <button class="preset-btn" data-preset="1">🔤 字母频率</button>
+                            <button class="preset-btn" data-preset="2">🎯 简单演示</button>
+                            <button class="preset-btn" data-preset="3">📊 均匀分布</button>
+                        </div>
+                    </div>
+                    <div class="panel-card">
+                        <h3><span class="dot" style="background:#48b89e;"></span>自定义数据</h3>
+                        <div class="custom-input-row">
+                            <input type="text" class="custom-input" id="huffCustomInput" placeholder="如: a:5,b:9,c:12">
+                            <button class="btn-apply" id="huffBtnApply">✓ 应用</button>
+                        </div>
+                        <div style="font-size:0.7rem;color:#9aa8b8;margin-top:6px;">格式：字符:频率，逗号或空格分隔</div>
+                    </div>
+                    <div class="panel-card">
+                        <h3>📝 当前步骤</h3>
+                        <div class="step-info" id="huffStepDesc">准备开始构建哈夫曼树...</div>
+                    </div>
+                    <div class="panel-card">
+                        <h3><span class="dot" style="background:#f59e3b;"></span>编码表</h3>
+                        <div class="code-table-wrap">
+                            <table class="code-table" id="huffCodeTable">
+                                <thead><tr><th>字符</th><th>频率</th><th>编码</th><th>位数</th></tr></thead>
+                                <tbody id="huffCodeTableBody"><tr><td colspan="4" style="color:#b0bcc8;">等待构建...</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="canvas-panel">
+                    <div class="canvas-card" id="huffCanvasCard">
+                        <canvas id="huffCanvas"></canvas>
+                        <div class="canvas-badge" id="huffCanvasBadge">森林视图</div>
+                    </div>
+                    <div class="control-bar">
+                        <button class="ctrl-btn" id="huffBtnFirst" title="第一步">⏮</button>
+                        <button class="ctrl-btn" id="huffBtnPrev" title="上一步">◀</button>
+                        <button class="ctrl-btn play-btn" id="huffBtnPlay" title="播放">▶</button>
+                        <button class="ctrl-btn" id="huffBtnNext" title="下一步">▶</button>
+                        <button class="ctrl-btn" id="huffBtnLast" title="最后">⏭</button>
+                        <button class="ctrl-btn" id="huffBtnReset" title="重置">↺</button>
+                        <span class="step-progress" id="huffStepProgress">步骤 0/0</span>
+                        <div class="step-dots" id="huffStepDots"></div>
+                        <div class="speed-selector">
+                            <span>速度</span>
+                            <select id="huffSpeedSelect">
+                                <option value="400">快⚡</option>
+                                <option value="800" selected>中▶</option>
+                                <option value="1500">慢🐢</option>
+                                <option value="2800">极慢🦥</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== Tab 2: 线索二叉树 ==================== -->
+        <div class="tab-panel" id="tabPanel2">
+            <div class="main-content">
+                <div class="side-panel">
+                    <div class="panel-card">
+                        <h3><span class="dot" style="background:#7c3aed;"></span>预设二叉树</h3>
+                        <div class="preset-buttons" id="threadPresetButtons">
+                            <button class="preset-btn active" data-preset="0">🌳 完全二叉树</button>
+                            <button class="preset-btn" data-preset="1">📐 表达式树</button>
+                            <button class="preset-btn" data-preset="2">⬅ 左偏树</button>
+                            <button class="preset-btn" data-preset="3">➡ 右偏树</button>
+                            <button class="preset-btn" data-preset="4">🔷 小型演示</button>
+                        </div>
+                    </div>
+                    <div class="panel-card">
+                        <h3><span class="dot" style="background:#6366f1;"></span>线索化类型</h3>
+                        <div class="thread-type-selector" id="threadTypeSelector">
+                            <button class="type-btn active" data-type="inorder">📋 中序线索化</button>
+                            <button class="type-btn" data-type="preorder">🔍 前序线索化</button>
+                            <button class="type-btn" data-type="postorder">📦 后序线索化</button>
+                        </div>
+                    </div>
+                    <div class="panel-card">
+                        <h3><span class="dot" style="background:#f59e3b;"></span>当前步骤</h3>
+                        <div class="step-info" id="threadStepDesc">准备开始线索化二叉树...</div>
+                        <div class="legend-mini" style="margin-top:8px;">
+                            <span><span class="legend-line solid"></span>孩子指针</span>
+                            <span><span class="legend-line dashed"></span>线索指针</span>
+                            <span style="color:#f59e3b;">●</span>当前节点
+                            <span style="color:#8b5cf6;">◈</span>pre节点
+                        </div>
+                    </div>
+                    <div class="panel-card">
+                        <h3>📜 遍历序列</h3>
+                        <div id="threadTraversalResult" style="font-family:'SF Mono',monospace;font-size:0.82rem;color:var(--accent2);letter-spacing:0.04em;word-break:break-all;line-height:1.5;">
+                            <span style="color:#b0bcc8;">等待构建完成...</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="canvas-panel">
+                    <div class="canvas-card" id="threadCanvasCard">
+                        <canvas id="threadCanvas"></canvas>
+                        <div class="canvas-badge" id="threadCanvasBadge">二叉树</div>
+                    </div>
+                    <div class="control-bar">
+                        <button class="ctrl-btn" id="threadBtnFirst" title="第一步">⏮</button>
+                        <button class="ctrl-btn" id="threadBtnPrev" title="上一步">◀</button>
+                        <button class="ctrl-btn play-btn" id="threadBtnPlay" title="播放">▶</button>
+                        <button class="ctrl-btn" id="threadBtnNext" title="下一步">▶</button>
+                        <button class="ctrl-btn" id="threadBtnLast" title="最后">⏭</button>
+                        <button class="ctrl-btn" id="threadBtnReset" title="重置">↺</button>
+                        <span class="step-progress" id="threadStepProgress">步骤 0/0</span>
+                        <div class="step-dots" id="threadStepDots"></div>
+                        <div class="speed-selector">
+                            <span>速度</span>
+                            <select id="threadSpeedSelect">
+                                <option value="350">快⚡</option>
+                                <option value="700" selected>中▶</option>
+                                <option value="1400">慢🐢</option>
+                                <option value="2500">极慢🦥</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="toast" id="toast"></div>
+
+    <script>
+        (function() {
+            // ==================== 公共工具 ====================
+            const toast = document.getElementById('toast');
+            let toastTimeout;
+
+            function showToast(msg) {
+                clearTimeout(toastTimeout);
+                toast.textContent = msg;
+                toast.classList.add('show');
+                toastTimeout = setTimeout(() => toast.classList.remove('show'), 2200);
+            }
+
+            // Tab切换
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            const tabPanels = document.querySelectorAll('.tab-panel');
+            let activeTab = 0;
+
+            tabBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const idx = parseInt(btn.dataset.tab);
+                    if (idx === activeTab) return;
+                    activeTab = idx;
+                    tabBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    tabPanels.forEach(p => p.classList.remove('active'));
+                    tabPanels[idx].classList.add('active');
+                    // 切换后重绘对应canvas
+                    setTimeout(() => {
+                        if (idx === 0 && btreeAllSteps.length > 0) { setupBTreeCanvas();
+                            btreeDrawCurrentStep(); }
+                        if (idx === 1 && huffAllSteps.length > 0) { setupHuffCanvas();
+                            huffDrawCurrentStep(); }
+                        if (idx === 2 && threadAllSteps.length > 0) { setupThreadCanvas();
+                            threadDrawCurrentStep(); }
+                    }, 150);
+                });
+            });
+
+            // ==================== polyfill roundRect ====================
+            if (!CanvasRenderingContext2D.prototype.roundRect) {
+                CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+                    if (typeof r === 'number') r = { tl: r, tr: r, br: r, bl: r };
+                    this.beginPath();
+                    this.moveTo(x + r.tl, y);
+                    this.lineTo(x + w - r.tr, y);
+                    this.quadraticCurveTo(x + w, y, x + w, y + r.tr);
+                    this.lineTo(x + w, y + h - r.br);
+                    this.quadraticCurveTo(x + w, y + h, x + w - r.br, y + h);
+                    this.lineTo(x + r.bl, y + h);
+                    this.quadraticCurveTo(x, y + h, x, y + h - r.bl);
+                    this.lineTo(x, y + r.tl);
+                    this.quadraticCurveTo(x, y, x + r.tl, y);
+                    this.closePath();
+                };
+            }
+
+            // ==================== 模块0: B树 ====================
+            let btreeNodeIdCounter = 0;
+            class BTreeNode {
+                constructor(isLeaf = true) {
+                    this.id = btreeNodeIdCounter++;
+                    this.keys = [];
+                    this.children = [];
+                    this.isLeaf = isLeaf;
+                    this.createdAtStep = -1;
+                    this.highlightedKeys = new Set();
+                    this.isNewNode = false;
+                }
+                clone() {
+                    const n = new BTreeNode(this.isLeaf);
+                    n.id = this.id;
+                    n.keys = [...this.keys];
+                    n.children = this.children.map(c => c.clone());
+                    n.createdAtStep = this.createdAtStep;
+                    n.highlightedKeys = new Set(this.highlightedKeys);
+                    n.isNewNode = this.isNewNode;
+                    return n;
+                }
+            }
+            class BTree {
+                constructor(order) {
+                    this.order = order;
+                    this.maxKeys = order - 1;
+                    this.minKeys = Math.ceil(order / 2) - 1;
+                    this.root = null;
+                }
+                insert(key) {
+                    const info = { insertedKey: key, splits: [], newNodeIds: [], promotedKey: null };
+                    if (!this.root) { this.root = new BTreeNode(true);
+                        this.root.keys.push(key);
+                        this.root.createdAtStep = 0;
+                        info.newNodeIds.push(this.root.id); return info; }
+                    if (this.root.keys.length === this.maxKeys) {
+                        const old = this.root;
+                        const nr = new BTreeNode(false);
+                        nr.children.push(old);
+                        nr.createdAtStep = -1;
+                        info.newNodeIds.push(nr.id);
+                        this._splitChild(nr, 0, old, info);
+                        this.root = nr;
+                        this._insertNonFull(this.root, key, info);
+                    } else { this._insertNonFull(this.root, key, info); }
+                    return info;
+                }
+                _splitChild(parent, index, child, info) {
+                    const t = Math.ceil(this.order / 2);
+                    const newNode = new BTreeNode(child.isLeaf);
+                    newNode.createdAtStep = -1;
+                    info.newNodeIds.push(newNode.id);
+                    const midKey = child.keys[t - 1];
+                    for (let j = t; j < child.keys.length; j++) newNode.keys.push(child.keys[j]);
+                    if (!child.isLeaf) for (let j = t; j < child.children.length; j++) newNode.children.push(child
+                        .children[j]);
+                    child.keys.length = t - 1;
+                    if (!child.isLeaf) child.children.length = t;
+                    parent.keys.splice(index, 0, midKey);
+                    parent.children.splice(index + 1, 0, newNode);
+                    info.splits.push({ parentId: parent.id, childId: child.id, newNodeId: newNode.id, promotedKey: midKey });
+                    if (info.promotedKey === null) info.promotedKey = midKey;
+                }
+                _insertNonFull(node, key, info) {
+                    let i = node.keys.length - 1;
+                    if (node.isLeaf) {
+                        while (i >= 0 && key < node.keys[i]) i--;
+                        i++;
+                        if (i > 0 && node.keys[i - 1] === key) return;
+                        if (i < node.keys.length && node.keys[i] === key) return;
+                        node.keys.splice(i, 0, key);
+                        node.highlightedKeys.add(i);
+                    } else {
+                        while (i >= 0 && key < node.keys[i]) i--;
+                        i++;
+                        if (node.children[i].keys.length === this.maxKeys) { this._splitChild(node, i, node.children[i],
+                                info); if (key > node.keys[i]) i++; }
+                        this._insertNonFull(node.children[i], key, info);
+                    }
+                }
+                clone() { if (!this.root) return null;
+                    const nt = new BTree(this.order);
+                    nt.root = this.root.clone(); return nt; }
+                clearHighlights(node = null) { if (!node) node = this.root; if (!node) return;
+                    node.highlightedKeys.clear();
+                    node.isNewNode = false;
+                    node.children.forEach(c => this.clearHighlights(c)); }
+            }
+            const btreePresets = [
+                { name: '升序插入', data: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] },
+                { name: '随机序列A', data: [20, 10, 30, 5, 15, 25, 35, 8, 12, 18, 28, 33, 3, 7, 22] },
+                { name: '交替模式', data: [50, 20, 70, 10, 30, 60, 80, 5, 15, 25, 35, 55, 65, 75, 85] },
+                { name: '密集插入', data: [100, 50, 150, 25, 75, 125, 175, 10, 40, 60, 90, 110, 140, 160, 190, 5, 15, 35, 45,
+                    55
+                ] },
+            ];
+            let btreeCurrentPreset = 0;
+            let btreeCurrentSeq = [...btreePresets[0].data];
+            let btreeCurrentOrder = 4;
+            let btreeAllSteps = [];
+            let btreeStepIdx = 0;
+            let btreeIsPlaying = false;
+            let btreePlayTimer = null;
+            let btreePlaySpeed = 650;
+            let btreeCanvasW = 800,
+                btreeCanvasH = 460;
+            let btreeCoordMap = new Map();
+            const btreeCanvas = document.getElementById('btreeCanvas');
+            const btreeCtx = btreeCanvas.getContext('2d');
+            const btreeCanvasCard = document.getElementById('btreeCanvasCard');
+            const btreeCanvasBadge = document.getElementById('btreeCanvasBadge');
+            const btreeStepDesc = document.getElementById('btreeStepDesc');
+            const btreeStepProgress = document.getElementById('btreeStepProgress');
+            const btreeStepDots = document.getElementById('btreeStepDots');
+            const btreeTreeInfo = document.getElementById('btreeTreeInfo');
+
+            function btreeUpdateOrderHint() {
+                const o = parseInt(document.getElementById('btreeOrderSelect').value);
+                document.getElementById('btreeOrderHint').textContent =
+                    `最多${o-1}键/节点·最多${o}子节点·最少${Math.ceil(o/2)-1}键/节点(非根)`;
+            }
+
+            function btreeBuildSteps(seq, order) {
+                btreeNodeIdCounter = 0;
+                btreeAllSteps = [];
+                btreeCoordMap.clear();
+                const bt = new BTree(order);
+                btreeAllSteps.push({ treeRoot: null, description: '初始状态：空树。准备开始插入键值。', stepType: 'initial',
+                    insertedKey: null, splitInfo: null });
+                if (!seq || seq.length === 0) return;
+                for (let i = 0; i < seq.length; i++) {
+                    const key = seq[i];
+                    if (bt.root) bt.clearHighlights();
+                    const info = bt.insert(key);
+                    if (bt.root) {
+                        const mark = (node) => { if (info.newNodeIds.includes(node.id)) node.isNewNode = true;
+                            node.children.forEach(mark); };
+                        mark(bt.root);
+                    }
+                    const clone = bt.clone();
+                    let desc = `插入键<strong>${key}</strong>`;
+                    if (info.splits.length > 0) {
+                        desc +=
+                            ' → <span style="color:#ef5b7b;">发生分裂！</span> ' + info.splits.map(s =>
+                                `键<strong>${s.promotedKey}</strong>提升`).join('；');
+                    } else desc += '，直接插入叶节点。';
+                    btreeAllSteps.push({ treeRoot: clone ? clone.root : null, description: desc, stepType: 'insert',
+                        insertedKey: key, splitInfo: info });
+                    if (bt.root) bt.clearHighlights();
+                }
+            }
+
+            function btreeGetNodeWidth(node) { return Math.max(60, 40 + node.keys.length * 44 + (node.keys.length - 1) * 2); }
+
+            function btreeCountLeaves(node) { if (!node) return 0; if (node.isLeaf) return 1; return node.children.reduce((a,
+                    c) => a + btreeCountLeaves(c), 0); }
+
+            function btreeGetDepth(node) { if (!node) return 0; if (node.isLeaf) return 1; return 1 + Math.max(...node.children
+                    .map(btreeGetDepth)); }
+
+            function btreeLayoutSubtree(node, xS, aw, y, lh, cm) {
+                if (!node) return;
+                const nw = btreeGetNodeWidth(node);
+                const nx = xS + aw / 2;
+                const nh = 44;
+                cm.set(node.id, { x: nx, y: y, width: nw, height: nh, node });
+                if (!node.isLeaf && node.children.length > 0) {
+                    const cy = y + lh;
+                    const tl = btreeCountLeaves(node);
+                    let cx = xS;
+                    node.children.forEach(c => { const cl = btreeCountLeaves(c);
+                        const cw = tl > 0 ? (aw * cl) / tl : aw / node.children.length;
+                        btreeLayoutSubtree(c, cx, cw, cy, lh, cm);
+                        cx += cw; });
+                }
+            }
+
+            function btreeCalcLayout(root, cw, ch) {
+                const cm = new Map();
+                if (!root) return cm;
+                const mx = 30,
+                    mt = 35,
+                    mb = 25;
+                const uw = cw - 2 * mx,
+                    uh = ch - mt - mb;
+                const d = btreeGetDepth(root);
+                const lh = Math.min(100, uh / Math.max(d, 1));
+                btreeLayoutSubtree(root, mx, uw, mt, lh, cm);
+                return cm;
+            }
+
+            function setupBTreeCanvas() {
+                const rect = btreeCanvasCard.getBoundingClientRect();
+                const dpr = Math.min(window.devicePixelRatio || 1, 2);
+                const dw = Math.min(rect.width - 28, 900);
+                const dh = Math.max(420, Math.min(500, rect.width * 0.52));
+                btreeCanvasW = Math.floor(dw * dpr);
+                btreeCanvasH = Math.floor(dh * dpr);
+                btreeCanvas.width = btreeCanvasW;
+                btreeCanvas.height = btreeCanvasH;
+                btreeCanvas.style.width = dw + 'px';
+                btreeCanvas.style.height = dh + 'px';
+                btreeCtx.setTransform(1, 0, 0, 1, 0, 0);
+                btreeCtx.scale(dpr, dpr);
+            }
+
+            function btreeGetLW() { return btreeCanvasW / (Math.min(window.devicePixelRatio || 1, 2)); }
+
+            function btreeGetLH() { return btreeCanvasH / (Math.min(window.devicePixelRatio || 1, 2)); }
+
+            function btreeDrawBg(lw, lh) {
+                btreeCtx.fillStyle = '#fdfdff';
+                btreeCtx.fillRect(0, 0, lw, lh);
+                btreeCtx.strokeStyle = '#f0f2f7';
+                btreeCtx.lineWidth = 0.5;
+                for (let x = 30; x < lw; x += 30) { btreeCtx.beginPath();
+                    btreeCtx.moveTo(x, 0);
+                    btreeCtx.lineTo(x, lh);
+                    btreeCtx.stroke(); }
+                for (let y = 30; y < lh; y += 30) { btreeCtx.beginPath();
+                    btreeCtx.moveTo(0, y);
+                    btreeCtx.lineTo(lw, y);
+                    btreeCtx.stroke(); }
+            }
+
+            function btreeDrawNode(coord, node) {
+                const { x, y, width, height } = coord;
+                const r = 9;
+                btreeCtx.save();
+                btreeCtx.shadowColor = 'rgba(0,0,0,0.05)';
+                btreeCtx.shadowBlur = 5;
+                btreeCtx.shadowOffsetY = 2;
+                let fc, sc, sw;
+                if (node.isNewNode) { fc = '#fff5f7';
+                    sc = '#ef5b7b';
+                    sw = 3; } else if (node.isLeaf) { fc = '#e6f7f2';
+                    sc = '#48b89e';
+                    sw = 2.2; } else { fc = '#eaf2fd';
+                    sc = '#5b8def';
+                    sw = 2.2; }
+                btreeCtx.fillStyle = fc;
+                btreeCtx.strokeStyle = sc;
+                btreeCtx.lineWidth = sw;
+                btreeCtx.beginPath();
+                btreeCtx.roundRect(x - width / 2, y - height / 2, width, height, r);
+                btreeCtx.fill();
+                btreeCtx.stroke();
+                if (node.isNewNode) {
+                    btreeCtx.strokeStyle = 'rgba(239,91,123,0.45)';
+                    btreeCtx.lineWidth = 1.4;
+                    btreeCtx.setLineDash([4, 3]);
+                    btreeCtx.beginPath();
+                    btreeCtx.roundRect(x - width / 2 - 4, y - height / 2 - 4, width + 8, height + 8, r + 2);
+                    btreeCtx.stroke();
+                    btreeCtx.setLineDash([]);
+                }
+                btreeCtx.restore();
+                const kw = 42;
+                const tkw = node.keys.length * kw + (node.keys.length - 1) * 2;
+                let ksx = x - tkw / 2;
+                for (let i = 0; i < node.keys.length; i++) {
+                    const kx = ksx + i * (kw + 2) + kw / 2;
+                    if (node.highlightedKeys.has(i)) {
+                        btreeCtx.save();
+                        btreeCtx.fillStyle = '#fef5e9';
+                        btreeCtx.strokeStyle = '#f59e3b';
+                        btreeCtx.lineWidth = 2;
+                        btreeCtx.beginPath();
+                        btreeCtx.arc(kx, y, 13, 0, Math.PI * 2);
+                        btreeCtx.fill();
+                        btreeCtx.stroke();
+                        btreeCtx.restore();
+                    }
+                    btreeCtx.save();
+                    btreeCtx.fillStyle = node.highlightedKeys.has(i) ? '#c2780a' : '#1a3c34';
+                    btreeCtx.font = 'bold 14px "SF Mono","Consolas",monospace';
+                    btreeCtx.textAlign = 'center';
+                    btreeCtx.textBaseline = 'middle';
+                    btreeCtx.fillText(node.keys[i], kx, y);
+                    btreeCtx.restore();
+                    if (i < node.keys.length - 1) {
+                        const sx = ksx + (i + 1) * (kw + 2) - 1;
+                        btreeCtx.save();
+                        btreeCtx.strokeStyle = '#d0d8e0';
+                        btreeCtx.lineWidth = 1;
+                        btreeCtx.setLineDash([3, 3]);
+                        btreeCtx.beginPath();
+                        btreeCtx.moveTo(sx, y - height / 2 + 9);
+                        btreeCtx.lineTo(sx, y + height / 2 - 9);
+                        btreeCtx.stroke();
+                        btreeCtx.setLineDash([]);
+                        btreeCtx.restore();
+                    }
+                }
+            }
+
+            function btreeDrawEdge(pc, cc, color = '#bcc5d4', width = 2) {
+                btreeCtx.save();
+                btreeCtx.strokeStyle = color;
+                btreeCtx.lineWidth = width;
+                btreeCtx.lineCap = 'round';
+                btreeCtx.beginPath();
+                const px = pc.x,
+                    py = pc.y + pc.height / 2;
+                const cx = cc.x,
+                    cy = cc.y - cc.height / 2;
+                const my = (py + cy) / 2;
+                btreeCtx.moveTo(px, py);
+                btreeCtx.bezierCurveTo(px, my, cx, my, cx, cy);
+                btreeCtx.stroke();
+                btreeCtx.restore();
+            }
+
+            function btreeDrawTree(root, lw, lh) {
+                btreeDrawBg(lw, lh);
+                if (!root) {
+                    btreeCtx.fillStyle = '#d0d8e0';
+                    btreeCtx.font = '16px "PingFang SC","Microsoft YaHei",sans-serif';
+                    btreeCtx.textAlign = 'center';
+                    btreeCtx.fillText('（空树 — 等待插入键值）', lw / 2, lh / 2);
+                    btreeCoordMap.clear();
+                    return;
+                }
+                const cm = btreeCalcLayout(root, lw, lh);
+                btreeCoordMap = cm;
+                const drawn = new Set();
+                for (const [nid, coord] of cm) {
+                    const node = coord.node;
+                    if (!node.isLeaf && node.children.length > 0) {
+                        node.children.forEach(child => {
+                            if (cm.has(child.id)) {
+                                const ek = `${nid}-${child.id}`;
+                                if (!drawn.has(ek)) {
+                                    drawn.add(ek);
+                                    const ec = (node.isNewNode || child.isNewNode) ? '#ef5b7b' : '#c5cdd8';
+                                    const ew = (node.isNewNode || child.isNewNode) ? 2.6 : 2;
+                                    btreeDrawEdge(coord, cm.get(child.id), ec, ew);
+                                }
+                            }
+                        });
+                    }
+                }
+                for (const [, coord] of cm) btreeDrawNode(coord, coord.node);
+                // legend
+                const ly = lh - 15;
+                btreeCtx.save();
+                btreeCtx.font = '10px "PingFang SC","Microsoft YaHei",sans-serif';
+                btreeCtx.textBaseline = 'middle';
+                [
+                    { cx: lw / 2 - 170, fc: '#e6f7f2', sc: '#48b89e', txt: '叶节点' },
+                    { cx: lw / 2 - 90, fc: '#eaf2fd', sc: '#5b8def', txt: '内部节点' },
+                    { cx: lw / 2 - 5, fc: '#fff5f7', sc: '#ef5b7b', txt: '新分裂' },
+                    { cx: lw / 2 + 75, fc: '#fef5e9', sc: '#f59e3b', txt: '新插入键', isCircle: true },
+                ].forEach(lg => {
+                    btreeCtx.fillStyle = lg.fc;
+                    btreeCtx.strokeStyle = lg.sc;
+                    btreeCtx.lineWidth = 2;
+                    btreeCtx.beginPath();
+                    if (lg.isCircle) btreeCtx.arc(lg.cx, ly, 6, 0, Math.PI * 2);
+                    else btreeCtx.roundRect(lg.cx - 6, ly - 6, 12, 12, 3);
+                    btreeCtx.fill();
+                    btreeCtx.stroke();
+                    btreeCtx.fillStyle = '#5a7d74';
+                    btreeCtx.textAlign = 'left';
+                    btreeCtx.fillText(lg.txt, lg.cx + 10, ly);
+                });
+                btreeCtx.restore();
+            }
+
+            function btreeCountKeys(node) { if (!node) return 0; return node.keys.length + node.children.reduce((a, c) => a +
+                    btreeCountKeys(c), 0); }
+
+            function btreeCountNodes(node) { if (!node) return 0; return 1 + node.children.reduce((a, c) => a + btreeCountNodes(
+                    c), 0); }
+
+            function btreeDrawCurrentStep() {
+                setupBTreeCanvas();
+                const lw = btreeGetLW(),
+                    lh = btreeGetLH();
+                btreeCtx.clearRect(0, 0, lw, lh);
+                if (btreeAllSteps.length === 0) { btreeDrawBg(lw, lh);
+                    btreeCtx.fillStyle = '#b0bcc8';
+                    btreeCtx.font = '15px "PingFang SC",sans-serif';
+                    btreeCtx.textAlign = 'center';
+                    btreeCtx.fillText('暂无数据，请选择预设或输入序列', lw / 2, lh / 2);
+                    btreeCanvasBadge.textContent = '空'; return; }
+                const step = btreeAllSteps[btreeStepIdx];
+                const root = step.treeRoot;
+                btreeCanvasBadge.textContent = root ? `🌲 B树·深度${btreeGetDepth(root)}·${btreeCountKeys(root)}键` : '🌱 空树';
+                btreeDrawTree(root, lw, lh);
+            }
+
+            function btreeUpdateUI() {
+                if (btreeAllSteps.length === 0) {
+                    btreeStepDesc.innerHTML = '准备开始构建B树...';
+                    btreeStepProgress.textContent = '步骤 0/0';
+                    btreeCanvasBadge.textContent = '空';
+                    btreeStepDots.innerHTML = '';
+                    btreeTreeInfo.innerHTML = '等待数据加载...';
+                    btreeUpdateButtons();
+                    btreeDrawCurrentStep();
+                    return;
+                }
+                const step = btreeAllSteps[btreeStepIdx];
+                btreeStepDesc.innerHTML = `<strong>步骤${btreeStepIdx}</strong>：${step.description}`;
+                btreeStepProgress.textContent = `步骤 ${btreeStepIdx}/${btreeAllSteps.length-1}`;
+                btreeStepDots.innerHTML = '';
+                const maxD = Math.min(btreeAllSteps.length, 22);
+                for (let i = 0; i < maxD; i++) {
+                    const dot = document.createElement('span');
+                    dot.className = 'step-dot';
+                    const ai = maxD < btreeAllSteps.length ? Math.floor(i / maxD * btreeAllSteps.length) : i;
+                    if (i === (maxD < btreeAllSteps.length ? Math.floor(btreeStepIdx / btreeAllSteps.length * maxD) :
+                            btreeStepIdx)) dot.classList.add('active');
+                    if (i < (maxD < btreeAllSteps.length ? Math.floor(btreeStepIdx / btreeAllSteps.length * maxD) :
+                            btreeStepIdx)) dot.classList.add('visited');
+                    dot.title = `步骤${ai}`;
+                    dot.addEventListener('click', () => btreeGoToStep(ai));
+                    btreeStepDots.appendChild(dot);
+                }
+                const root = step.treeRoot;
+                if (root) {
+                    btreeTreeInfo.innerHTML =
+                        `键总数：<strong>${btreeCountKeys(root)}</strong> | 节点数：<strong>${btreeCountNodes(root)}</strong> | 深度：<strong>${btreeGetDepth(root)}</strong><br>阶数：${btreeCurrentOrder} | 每节点最多${btreeCurrentOrder-1}键`;
+                } else btreeTreeInfo.innerHTML = '当前树为空。';
+                btreeUpdateButtons();
+                btreeDrawCurrentStep();
+            }
+
+            function btreeUpdateButtons() {
+                const t = btreeAllSteps.length;
+                const f = btreeStepIdx === 0;
+                const l = btreeStepIdx >= t - 1;
+                document.getElementById('btreeBtnFirst').disabled = f || t === 0;
+                document.getElementById('btreeBtnPrev').disabled = f || t === 0;
+                document.getElementById('btreeBtnNext').disabled = l || t === 0;
+                document.getElementById('btreeBtnLast').disabled = l || t === 0;
+                document.getElementById('btreeBtnReset').disabled = t === 0;
+                document.getElementById('btreeBtnPlay').disabled = t <= 1;
+            }
+
+            function btreeGoToStep(idx) { if (btreeAllSteps.length === 0) return;
+                btreeStepIdx = Math.max(0, Math.min(idx, btreeAllSteps.length - 1));
+                btreeUpdateUI(); }
+
+            function btreeStopPlay() { btreeIsPlaying = false; const bp = document.getElementById('btreeBtnPlay');
+                bp.textContent = '▶';
+                bp.classList.remove('playing');
+                clearTimeout(btreePlayTimer); }
+
+            function btreeStartPlay() {
+                if (btreeIsPlaying || btreeAllSteps.length <= 1) return;
+                btreeIsPlaying = true;
+                const bp = document.getElementById('btreeBtnPlay');
+                bp.textContent = '⏸';
+                bp.classList.add('playing');
+                btreePlaySpeed = parseInt(document.getElementById('btreeSpeedSelect').value) || 650;
+                btreeAdvancePlay();
+            }
+
+            function btreeAdvancePlay() { if (!btreeIsPlaying || btreeStepIdx >= btreeAllSteps.length - 1) { btreeStopPlay(); return; }
+                btreeGoToStep(btreeStepIdx + 1); if (btreeStepIdx >= btreeAllSteps.length - 1) { btreeStopPlay(); return; }
+                btreePlaySpeed = parseInt(document.getElementById('btreeSpeedSelect').value) || 650;
+                btreePlayTimer = setTimeout(btreeAdvancePlay, btreePlaySpeed); }
+
+            function btreeTogglePlay() { if (btreeIsPlaying) btreeStopPlay(); else { if (btreeStepIdx >= btreeAllSteps.length -
+                    1) { btreeStepIdx = 0;
+                    btreeUpdateUI(); }
+                btreeStartPlay(); } }
+
+            function btreeLoadSeq(seq) {
+                btreeStopPlay();
+                btreeCurrentSeq = [...seq];
+                btreeCurrentOrder = parseInt(document.getElementById('btreeOrderSelect').value);
+                btreeBuildSteps(btreeCurrentSeq, btreeCurrentOrder);
+                btreeStepIdx = 0;
+                btreeCoordMap.clear();
+                btreeUpdateUI();
+                if (seq.length > 0) showToast(`✅ B树：已加载${seq.length}个键值，共${btreeAllSteps.length-1}个步骤`);
+            }
+
+            function btreeLoadPreset(idx) {
+                btreeCurrentPreset = idx;
+                btreeCurrentSeq = [...btreePresets[idx].data];
+                document.querySelectorAll('#btreePresetButtons .preset-btn').forEach((b, i) => b.classList.toggle('active',
+                    i === idx));
+                document.getElementById('btreeCustomInput').value = '';
+                btreeLoadSeq(btreeCurrentSeq);
+            }
+
+            function btreeApplyCustom() {
+                const raw = document.getElementById('btreeCustomInput').value.trim();
+                if (!raw) { showToast('⚠️ 请输入键值序列'); return; }
+                const parts = raw.split(/[,，\s\n]+/).filter(p => p.trim());
+                const parsed = [];
+                for (const p of parts) { const n = parseInt(p); if (isNaN(n)) { showToast(`⚠️ 无效："${p}"`); return; }
+                    parsed.push(n); }
+                if (parsed.length === 0) { showToast('⚠️ 未能解析'); return; }
+                document.querySelectorAll('#btreePresetButtons .preset-btn').forEach(b => b.classList.remove('active'));
+                btreeCurrentSeq = parsed;
+                btreeLoadSeq(parsed);
+                showToast(`✅ 已应用：${parsed.length}个键值`);
+            }
+
+            // B树事件绑定
+            document.getElementById('btreePresetButtons').addEventListener('click', e => { const b = e.target.closest(
+                    '.preset-btn'); if (!b) return;
+                const i = parseInt(b.dataset.preset); if (!isNaN(i) && i < btreePresets.length) btreeLoadPreset(i); });
+            document.getElementById('btreeBtnApply').addEventListener('click', btreeApplyCustom);
+            document.getElementById('btreeCustomInput').addEventListener('keydown', e => { if (e.key === 'Enter') { e
+                    .preventDefault();
+                    btreeApplyCustom(); } });
+            document.getElementById('btreeOrderSelect').addEventListener('change', () => { btreeUpdateOrderHint();
+                btreeCurrentOrder = parseInt(document.getElementById('btreeOrderSelect').value); if (btreeCurrentSeq
+                    .length > 0) btreeLoadSeq(btreeCurrentSeq); });
+            document.getElementById('btreeBtnFirst').addEventListener('click', () => btreeGoToStep(0));
+            document.getElementById('btreeBtnPrev').addEventListener('click', () => btreeGoToStep(btreeStepIdx - 1));
+            document.getElementById('btreeBtnNext').addEventListener('click', () => btreeGoToStep(btreeStepIdx + 1));
+            document.getElementById('btreeBtnLast').addEventListener('click', () => btreeGoToStep(btreeAllSteps.length - 1));
+            document.getElementById('btreeBtnReset').addEventListener('click', () => { btreeStopPlay();
+                btreeStepIdx = 0;
+                btreeUpdateUI(); });
+            document.getElementById('btreeBtnPlay').addEventListener('click', btreeTogglePlay);
+            document.getElementById('btreeSpeedSelect').addEventListener('change', () => { btreePlaySpeed = parseInt(document
+                    .getElementById('btreeSpeedSelect').value) || 650; if (btreeIsPlaying) { btreeStopPlay();
+                    btreeStartPlay(); } });
+            window.addEventListener('resize', () => { if (activeTab === 0) { setupBTreeCanvas();
+                    btreeDrawCurrentStep(); } });
+
+            // ==================== 模块1: 哈夫曼树 ====================
+            let huffNodeIdCounter = 0;
+            class HuffmanNode { constructor(char, freq, left = null, right = null) { this.id = huffNodeIdCounter++;
+                    this.char = char;
+                    this.freq = freq;
+                    this.left = left;
+                    this.right = right;
+                    this.isLeaf = !left && !right;
+                    this.createdAtStep = -1; } }
+            const huffPresets = [
+                { name: '经典示例', data: [{ char: 'a', freq: 5 }, { char: 'b', freq: 9 }, { char: 'c', freq: 12 }, { char: 'd',
+                        freq: 13 }, { char: 'e', freq: 16 }, { char: 'f', freq: 45 }
+                ] },
+                { name: '字母频率', data: [{ char: 'A', freq: 8 }, { char: 'B', freq: 3 }, { char: 'C', freq: 7 }, { char: 'D',
+                        freq: 12 }, { char: 'E', freq: 20 }, { char: 'F', freq: 4 }, { char: 'G', freq: 6 }
+                ] },
+                { name: '简单演示', data: [{ char: 'x', freq: 10 }, { char: 'y', freq: 15 }, { char: 'z', freq: 20 }, { char: 'w',
+                        freq: 25 }, { char: 'v', freq: 30 }
+                ] },
+                { name: '均匀分布', data: [{ char: 'α', freq: 5 }, { char: 'β', freq: 5 }, { char: 'γ', freq: 5 }, { char: 'δ',
+                        freq: 5 }, { char: 'ε', freq: 5 }, { char: 'ζ', freq: 5 }
+                ] },
+            ];
+            let huffCurrentPreset = 0;
+            let huffCurrentData = [...huffPresets[0].data];
+            let huffAllSteps = [];
+            let huffStepIdx = 0;
+            let huffIsPlaying = false;
+            let huffPlayTimer = null;
+            let huffPlaySpeed = 800;
+            let huffCanvasW = 800,
+                huffCanvasH = 460;
+            let huffCoordMap = new Map();
+            const huffCanvas = document.getElementById('huffCanvas');
+            const huffCtx = huffCanvas.getContext('2d');
+            const huffCanvasCard = document.getElementById('huffCanvasCard');
+            const huffCanvasBadge = document.getElementById('huffCanvasBadge');
+            const huffStepDesc = document.getElementById('huffStepDesc');
+            const huffStepProgress = document.getElementById('huffStepProgress');
+            const huffStepDots = document.getElementById('huffStepDots');
+            const huffCodeTableBody = document.getElementById('huffCodeTableBody');
+
+            function huffBuildTree(data) {
+                huffNodeIdCounter = 0;
+                huffAllSteps = [];
+                huffCoordMap.clear();
+                if (!data || data.length === 0) return null;
+                if (data.length === 1) {
+                    const leaf = new HuffmanNode(data[0].char, data[0].freq);
+                    leaf.createdAtStep = 0;
+                    huffAllSteps.push({ forestRoots: [leaf], newlyMergedNode: null,
+                        description: `仅1个节点"${data[0].char}"` });
+                    return leaf;
+                }
+                let forest = data.map(d => { const l = new HuffmanNode(d.char, d.freq);
+                    l.createdAtStep = 0; return l; });
+                huffAllSteps.push({ forestRoots: [...forest], newlyMergedNode: null,
+                    description: `初始森林：${forest.length}个叶子节点。` });
+                let mc = 0;
+                while (forest.length > 1) {
+                    mc++;
+                    forest.sort((a, b) => a.freq - b.freq || a.id - b.id);
+                    const left = forest.shift(),
+                        right = forest.shift();
+                    const m = new HuffmanNode(null, left.freq + right.freq, left, right);
+                    m.createdAtStep = mc;
+                    forest.push(m);
+                    huffAllSteps.push({ forestRoots: [...forest], newlyMergedNode: m, mergedLeft: left,
+                        mergedRight: right,
+                        description: `第${mc}次合并：频率${left.freq}+${right.freq}=${m.freq}。剩余${forest.length}个节点。` });
+                }
+                return forest[0];
+            }
+
+            function huffCountLeaves(node) { if (!node) return 0; if (node.isLeaf) return 1; return huffCountLeaves(node.left) +
+                    huffCountLeaves(node.right); }
+
+            function huffGetDepth(node) { if (!node) return 0; if (node.isLeaf) return 1; return 1 + Math.max(huffGetDepth(node
+                    .left), huffGetDepth(node.right)); }
+
+            function huffLayoutSubtree(node, xS, aw, y, lh, cm) {
+                if (!node) return;
+                const nx = xS + aw / 2;
+                const r = node.isLeaf ? 19 : 21;
+                cm.set(node.id, { x: nx, y, radius: r, node });
+                if (!node.isLeaf) {
+                    const ll = huffCountLeaves(node.left),
+                        rl = huffCountLeaves(node.right);
+                    const tl = ll + rl;
+                    const lw = tl > 0 ? (aw * ll) / tl : aw / 2;
+                    const rw = tl > 0 ? (aw * rl) / tl : aw / 2;
+                    const cy = y + lh;
+                    if (node.left) huffLayoutSubtree(node.left, xS, lw, cy, lh, cm);
+                    if (node.right) huffLayoutSubtree(node.right, xS + lw, rw, cy, lh, cm);
+                }
+            }
+
+            function huffCalcForestLayout(roots, cw, ch) {
+                const cm = new Map();
+                if (!roots || roots.length === 0) return cm;
+                const mx = 45,
+                    mt = 50,
+                    mb = 35;
+                const uw = cw - 2 * mx,
+                    uh = ch - mt - mb;
+                const lc = roots.map(huffCountLeaves);
+                const tl = lc.reduce((a, b) => a + b, 0);
+                const md = Math.max(...roots.map(huffGetDepth), 1);
+                const lh = Math.min(85, uh / Math.max(md, 1));
+                let xc = mx;
+                for (let i = 0; i < roots.length; i++) {
+                    const tw = (lc[i] / tl) * uw;
+                    huffLayoutSubtree(roots[i], xc, tw, mt, lh, cm);
+                    xc += tw;
+                }
+                return cm;
+            }
+
+            function huffCalcSingleLayout(root, cw, ch) {
+                const cm = new Map();
+                if (!root) return cm;
+                const mx = 35,
+                    mt = 38,
+                    mb = 28;
+                const uw = cw - 2 * mx,
+                    uh = ch - mt - mb;
+                const d = huffGetDepth(root);
+                const lh = Math.min(85, uh / Math.max(d, 1));
+                huffLayoutSubtree(root, mx, uw, mt, lh, cm);
+                return cm;
+            }
+
+            function setupHuffCanvas() {
+                const rect = huffCanvasCard.getBoundingClientRect();
+                const dpr = Math.min(window.devicePixelRatio || 1, 2);
+                const dw = Math.min(rect.width - 28, 900);
+                const dh = Math.max(420, Math.min(500, rect.width * 0.52));
+                huffCanvasW = Math.floor(dw * dpr);
+                huffCanvasH = Math.floor(dh * dpr);
+                huffCanvas.width = huffCanvasW;
+                huffCanvas.height = huffCanvasH;
+                huffCanvas.style.width = dw + 'px';
+                huffCanvas.style.height = dh + 'px';
+                huffCtx.setTransform(1, 0, 0, 1, 0, 0);
+                huffCtx.scale(dpr, dpr);
+            }
+
+            function huffGetLW() { return huffCanvasW / (Math.min(window.devicePixelRatio || 1, 2)); }
+
+            function huffGetLH() { return huffCanvasH / (Math.min(window.devicePixelRatio || 1, 2)); }
+
+            function huffDrawBg(lw, lh) { huffCtx.fillStyle = '#fdfdff';
+                huffCtx.fillRect(0, 0, lw, lh);
+                huffCtx.strokeStyle = '#f0f2f7';
+                huffCtx.lineWidth = 0.5; for (let x = 30; x < lw; x += 30) { huffCtx.beginPath();
+                    huffCtx.moveTo(x, 0);
+                    huffCtx.lineTo(x, lh);
+                    huffCtx.stroke(); } for (let y = 30; y < lh; y += 30) { huffCtx.beginPath();
+                    huffCtx.moveTo(0, y);
+                    huffCtx.lineTo(lw, y);
+                    huffCtx.stroke(); } }
+
+            function huffDrawEdge(x1, y1, x2, y2, color, width) { huffCtx.save();
+                huffCtx.strokeStyle = color;
+                huffCtx.lineWidth = width;
+                huffCtx.lineCap = 'round';
+                huffCtx.beginPath();
+                huffCtx.moveTo(x1, y1);
+                const my = (y1 + y2) / 2;
+                huffCtx.bezierCurveTo(x1, my, x2, my, x2, y2);
+                huffCtx.stroke();
+                huffCtx.restore(); }
+
+            function huffDrawNode(x, y, r, node, isNew, isSel) {
+                huffCtx.save();
+                huffCtx.shadowColor = 'rgba(0,0,0,0.06)';
+                huffCtx.shadowBlur = 7;
+                huffCtx.shadowOffsetY = 2;
+                let fc, sc;
+                if (isNew) { fc = '#fff5f7';
+                    sc = '#ef5b7b';
+                    huffCtx.shadowColor = 'rgba(239,91,123,0.3)'; } else if (isSel) { fc = '#fffbf0';
+                    sc = '#f59e3b'; } else if (node.isLeaf) { fc = '#e6f7f2';
+                    sc = '#48b89e'; } else { fc = '#eaf2fd';
+                    sc = '#5b8def'; }
+                huffCtx.fillStyle = fc;
+                huffCtx.strokeStyle = sc;
+                huffCtx.lineWidth = isNew ? 3.2 : 2.3;
+                huffCtx.beginPath();
+                huffCtx.arc(x, y, r, 0, Math.PI * 2);
+                huffCtx.fill();
+                huffCtx.stroke();
+                if (isNew) { huffCtx.strokeStyle = 'rgba(239,91,123,0.45)';
+                    huffCtx.lineWidth = 1.4;
+                    huffCtx.setLineDash([4, 3]);
+                    huffCtx.beginPath();
+                    huffCtx.arc(x, y, r + 6, 0, Math.PI * 2);
+                    huffCtx.stroke();
+                    huffCtx.setLineDash([]); }
+                huffCtx.restore();
+                huffCtx.save();
+                huffCtx.textAlign = 'center';
+                huffCtx.textBaseline = 'middle';
+                if (node.isLeaf && node.char) { huffCtx.fillStyle = '#1a3c34';
+                    huffCtx.font = `bold ${Math.max(12,r*0.65)}px "PingFang SC",sans-serif`;
+                    huffCtx.fillText(node.char, x, y - 3);
+                    huffCtx.fillStyle = '#5a7d74';
+                    huffCtx.font = `${Math.max(9,r*0.45)}px "SF Mono",monospace`;
+                    huffCtx.fillText(node.freq, x, y + r * 0.38); } else { huffCtx.fillStyle = '#2c4458';
+                    huffCtx.font = `bold ${Math.max(11,r*0.55)}px "SF Mono",monospace`;
+                    huffCtx.fillText(node.freq, x, y); }
+                huffCtx.restore();
+            }
+
+            function huffDrawForestStep(step) {
+                const lw = huffGetLW(),
+                    lh = huffGetLH();
+                huffDrawBg(lw, lh);
+                const forest = step.forestRoots;
+                if (!forest || forest.length === 0) return;
+                const cm = huffCalcForestLayout(forest, lw, lh);
+                huffCoordMap = cm;
+                const newId = step.newlyMergedNode ? step.newlyMergedNode.id : null;
+                const selIds = new Set();
+                if (step.mergedLeft) selIds.add(step.mergedLeft.id);
+                if (step.mergedRight) selIds.add(step.mergedRight.id);
+                const drawn = new Set();
+                for (const [, coord] of cm) {
+                    const node = coord.node;
+                    [node.left, node.right].forEach(child => { if (child && cm.has(child.id)) { const ek =
+                                `${node.id}-${child.id}`; if (!drawn.has(ek)) { drawn.add(ek);
+                                huffDrawEdge(coord.x, coord.y, cm.get(child.id).x, cm.get(child.id).y,
+                                    node.id === newId ? '#ef5b7b' : '#c5cdd8', node.id === newId ? 2.8 :
+                                    2); } } });
+                }
+                for (const [, coord] of cm) {
+                    huffDrawNode(coord.x, coord.y, coord.radius, coord.node, coord.node.id === newId, selIds.has(coord
+                        .node.id) && coord.node.id !== newId);
+                }
+            }
+
+            function huffDrawFinalStep(step) {
+                const lw = huffGetLW(),
+                    lh = huffGetLH();
+                huffDrawBg(lw, lh);
+                const root = step.forestRoots[0];
+                if (!root) return;
+                const cm = huffCalcSingleLayout(root, lw, lh);
+                huffCoordMap = cm;
+                const drawn = new Set();
+                for (const [, coord] of cm) {
+                    const node = coord.node;
+                    [node.left, node.right].forEach((child, ci) => { if (child && cm.has(child.id)) { const ek =
+                                `${node.id}-${child.id}`; if (!drawn.has(ek)) { drawn.add(ek);
+                                huffCtx.save();
+                                huffCtx.strokeStyle = '#b0bed0';
+                                huffCtx.lineWidth = 2.1;
+                                huffCtx.lineCap = 'round';
+                                huffCtx.beginPath();
+                                huffCtx.moveTo(coord.x, coord.y);
+                                const my = (coord.y + cm.get(child.id).y) / 2;
+                                huffCtx.bezierCurveTo(coord.x, my, cm.get(child.id).x, my, cm.get(child.id).x, cm
+                                    .get(child.id).y);
+                                huffCtx.stroke();
+                                const mx = (coord.x + cm.get(child.id).x) / 2;
+                                const my2 = (coord.y + cm.get(child.id).y) / 2;
+                                huffCtx.fillStyle = '#fff';
+                                huffCtx.fillRect(mx - 12, my2 - 9, 24, 18);
+                                huffCtx.fillStyle = '#3b4a5c';
+                                huffCtx.font = 'bold 12px "SF Mono",monospace';
+                                huffCtx.textAlign = 'center';
+                                huffCtx.fillText(ci === 0 ? '0' : '1', mx, my2);
+                                huffCtx.restore(); } } });
+                }
+                for (const [, coord] of cm) huffDrawNode(coord.x, coord.y, coord.radius, coord.node, false, false);
+            }
+
+            function huffDrawCurrentStep() {
+                setupHuffCanvas();
+                const lw = huffGetLW(),
+                    lh = huffGetLH();
+                huffCtx.clearRect(0, 0, lw, lh);
+                if (huffAllSteps.length === 0) { huffDrawBg(lw, lh);
+                    huffCtx.fillStyle = '#b0bcc8';
+                    huffCtx.font = '15px "PingFang SC",sans-serif';
+                    huffCtx.textAlign = 'center';
+                    huffCtx.fillText('暂无数据', lw / 2, lh / 2);
+                    huffCanvasBadge.textContent = '空'; return; }
+                const step = huffAllSteps[huffStepIdx];
+                const isFinal = huffStepIdx === huffAllSteps.length - 1 && step.forestRoots.length === 1;
+                huffCanvasBadge.textContent = isFinal ? '🌳 完整哈夫曼树' : `🌲 森林·${step.forestRoots.length}棵树`;
+                if (isFinal) huffDrawFinalStep(step);
+                else huffDrawForestStep(step);
+            }
+
+            function huffGenCodes(root) {
+                const codes = [];
+                function trav(node, path) { if (!node) return; if (node.isLeaf) { codes.push({ char: node.char, freq: node
+                            .freq, code: path.join(''), bits: path.length }); return; } if (node.left) trav(node.left,
+                        [...path, '0']); if (node.right) trav(node.right, [...path, '1']); }
+                trav(root, []);
+                codes.sort((a, b) => a.bits - b.bits || a.freq - b.freq);
+                return codes;
+            }
+
+            function huffUpdateCodeTable() {
+                if (huffAllSteps.length === 0) { huffCodeTableBody.innerHTML =
+                        '<tr><td colspan="4">等待构建...</td></tr>'; return; }
+                const last = huffAllSteps[huffAllSteps.length - 1];
+                if (last.forestRoots.length === 1) {
+                    const codes = huffGenCodes(last.forestRoots[0]);
+                    huffCodeTableBody.innerHTML = codes.map(c =>
+                        `<tr><td><b>${c.char}</b></td><td>${c.freq}</td><td class="code-bits">${c.code}</td><td>${c.bits}</td></tr>`
+                    ).join('');
+                } else huffCodeTableBody.innerHTML = '<tr><td colspan="4">构建尚未完成...</td></tr>';
+            }
+
+            function huffUpdateUI() {
+                if (huffAllSteps.length === 0) { huffStepDesc.innerHTML = '准备开始...';
+                    huffStepProgress.textContent = '步骤 0/0';
+                    huffCanvasBadge.textContent = '空';
+                    huffStepDots.innerHTML = '';
+                    huffUpdateCodeTable();
+                    huffUpdateButtons();
+                    huffDrawCurrentStep(); return; }
+                const step = huffAllSteps[huffStepIdx];
+                huffStepDesc.innerHTML = `<strong>步骤${huffStepIdx}</strong>：${step.description}`;
+                huffStepProgress.textContent = `步骤 ${huffStepIdx}/${huffAllSteps.length-1}`;
+                huffStepDots.innerHTML = '';
+                for (let i = 0; i < huffAllSteps.length; i++) {
+                    const dot = document.createElement('span');
+                    dot.className = 'step-dot';
+                    if (i === huffStepIdx) dot.classList.add('active');
+                    if (i < huffStepIdx) dot.classList.add('visited');
+                    dot.title = `步骤${i}`;
+                    dot.addEventListener('click', () => huffGoToStep(i));
+                    huffStepDots.appendChild(dot);
+                }
+                huffUpdateCodeTable();
+                huffUpdateButtons();
+                huffDrawCurrentStep();
+            }
+
+            function huffUpdateButtons() {
+                const t = huffAllSteps.length;
+                document.getElementById('huffBtnFirst').disabled = huffStepIdx === 0 || t === 0;
+                document.getElementById('huffBtnPrev').disabled = huffStepIdx === 0 || t === 0;
+                document.getElementById('huffBtnNext').disabled = huffStepIdx >= t - 1 || t === 0;
+                document.getElementById('huffBtnLast').disabled = huffStepIdx >= t - 1 || t === 0;
+                document.getElementById('huffBtnReset').disabled = t === 0;
+                document.getElementById('huffBtnPlay').disabled = t <= 1;
+            }
+
+            function huffGoToStep(i) { huffStepIdx = Math.max(0, Math.min(i, huffAllSteps.length - 1));
+                huffUpdateUI(); }
+
+            function huffStopPlay() { huffIsPlaying = false;
+                document.getElementById('huffBtnPlay').textContent = '▶';
+                document.getElementById('huffBtnPlay').classList.remove('playing');
+                clearTimeout(huffPlayTimer); }
+
+            function huffStartPlay() { if (huffIsPlaying || huffAllSteps.length <= 1) return;
+                huffIsPlaying = true;
+                document.getElementById('huffBtnPlay').textContent = '⏸';
+                document.getElementById('huffBtnPlay').classList.add('playing');
+                huffPlaySpeed = parseInt(document.getElementById('huffSpeedSelect').value) || 800;
+                huffAdvancePlay(); }
+
+            function huffAdvancePlay() { if (!huffIsPlaying || huffStepIdx >= huffAllSteps.length - 1) { huffStopPlay(); return; }
+                huffGoToStep(huffStepIdx + 1); if (huffStepIdx >= huffAllSteps.length - 1) { huffStopPlay(); return; }
+                huffPlaySpeed = parseInt(document.getElementById('huffSpeedSelect').value) || 800;
+                huffPlayTimer = setTimeout(huffAdvancePlay, huffPlaySpeed); }
+
+            function huffTogglePlay() { if (huffIsPlaying) huffStopPlay(); else { if (huffStepIdx >= huffAllSteps.length - 1) {
+                    huffStepIdx = 0;
+                    huffUpdateUI(); }
+                huffStartPlay(); } }
+
+            function huffLoadData(data) {
+                huffStopPlay();
+                huffCurrentData = [...data];
+                huffBuildTree(huffCurrentData);
+                huffStepIdx = 0;
+                huffCoordMap.clear();
+                huffUpdateUI();
+                if (data.length > 0) showToast(`✅ 哈夫曼：已加载${data.length}个节点`);
+            }
+
+            function huffLoadPreset(i) { huffCurrentPreset = i;
+                huffCurrentData = [...huffPresets[i].data];
+                document.querySelectorAll('#huffPresetButtons .preset-btn').forEach((b, j) => b.classList.toggle('active',
+                    j === i));
+                document.getElementById('huffCustomInput').value = '';
+                huffLoadData(huffCurrentData); }
+
+            function huffApplyCustom() {
+                const raw = document.getElementById('huffCustomInput').value.trim();
+                if (!raw) { showToast('⚠️ 请输入数据'); return; }
+                const parts = raw.split(/[,，\s\n]+/).filter(p => p.trim());
+                const parsed = [];
+                for (const p of parts) { const ci = p.lastIndexOf(':'); if (ci <= 0) { showToast(`⚠️ 格式错误："${p}"`); return; }
+                    const ch = p.substring(0, ci).trim();
+                    const f = parseInt(p.substring(ci + 1).trim()); if (isNaN(f) || f <= 0) { showToast(
+                        `⚠️ 频率无效："${p}"`); return; }
+                    parsed.push({ char: ch[0] || ch, freq: f }); }
+                if (parsed.length === 0) { showToast('⚠️ 未能解析'); return; }
+                document.querySelectorAll('#huffPresetButtons .preset-btn').forEach(b => b.classList.remove('active'));
+                huffCurrentData = parsed;
+                huffLoadData(parsed);
+                showToast(`✅ 已应用：${parsed.length}个节点`);
+            }
+
+            document.getElementById('huffPresetButtons').addEventListener('click', e => { const b = e.target.closest(
+                    '.preset-btn'); if (!b) return;
+                const i = parseInt(b.dataset.preset); if (!isNaN(i) && i < huffPresets.length) huffLoadPreset(i); });
+            document.getElementById('huffBtnApply').addEventListener('click', huffApplyCustom);
+            document.getElementById('huffCustomInput').addEventListener('keydown', e => { if (e.key === 'Enter') { e
+                    .preventDefault();
+                    huffApplyCustom(); } });
+            document.getElementById('huffBtnFirst').addEventListener('click', () => huffGoToStep(0));
+            document.getElementById('huffBtnPrev').addEventListener('click', () => huffGoToStep(huffStepIdx - 1));
+            document.getElementById('huffBtnNext').addEventListener('click', () => huffGoToStep(huffStepIdx + 1));
+            document.getElementById('huffBtnLast').addEventListener('click', () => huffGoToStep(huffAllSteps.length - 1));
+            document.getElementById('huffBtnReset').addEventListener('click', () => { huffStopPlay();
+                huffStepIdx = 0;
+                huffUpdateUI(); });
+            document.getElementById('huffBtnPlay').addEventListener('click', huffTogglePlay);
+            document.getElementById('huffSpeedSelect').addEventListener('change', () => { huffPlaySpeed = parseInt(document
+                    .getElementById('huffSpeedSelect').value) || 800; if (huffIsPlaying) { huffStopPlay();
+                    huffStartPlay(); } });
+
+            // ==================== 模块2: 线索二叉树 ====================
+            let threadNodeIdCounter = 0;
+            class ThreadedNode { constructor(char, left = null, right = null) { this.id = threadNodeIdCounter++;
+                    this.char = char;
+                    this.left = left;
+                    this.right = right;
+                    this.ltag = 0;
+                    this.rtag = 0;
+                    this.isLeaf = !left && !right;
+                    this._originalLeft = left;
+                    this._originalRight = right; }
+                cloneSnapshot() { return { id: this.id, char: this.char, ltag: this.ltag, rtag: this.rtag, leftId: this.left ?
+                            this.left.id : null, rightId: this.right ? this.right.id : null, isLeaf: this.isLeaf }; } }
+            const threadPresets = [{ name: '完全二叉树', desc: { char: 'A', left: { char: 'B', left: { char: 'D' }, right: { char: 'E' } },
+                    right: { char: 'C', left: { char: 'F' }, right: { char: 'G' } } } }, { name: '表达式树', desc: { char: '+',
+                    left: { char: '*', left: { char: 'a' }, right: { char: 'b' } }, right: { char: '-', left: { char: 'c' },
+                        right: { char: 'd' } } } }, { name: '左偏树', desc: { char: 'R', left: { char: 'L1', left: { char: 'L2',
+                        left: { char: 'L3' } } }, right: { char: 'r' } } }, { name: '右偏树', desc: { char: 'R', left: { char: 'l' },
+                    right: { char: 'R1', right: { char: 'R2', right: { char: 'R3' } } } } }, { name: '小型演示', desc: { char: 'M',
+                    left: { char: 'L', left: { char: 'LL' } }, right: { char: 'R', right: { char: 'RR' } } } }, ];
+
+            function threadBuildTree(desc) {
+                threadNodeIdCounter = 0;
+
+                function helper(d) { if (!d) return null;
+                    const n = new ThreadedNode(d.char);
+                    n.left = helper(d.left || null);
+                    n.right = helper(d.right || null);
+                    n.isLeaf = !n.left && !n.right;
+                    n._originalLeft = n.left;
+                    n._originalRight = n.right; return n; }
+                return helper(desc);
+            }
+            let threadCurrentPreset = 0;
+            let threadCurrentType = 'inorder';
+            let threadTreeRoot = null;
+            let threadAllNodes = [];
+            let threadAllSteps = [];
+            let threadStepIdx = 0;
+            let threadIsPlaying = false;
+            let threadPlayTimer = null;
+            let threadPlaySpeed = 700;
+            let threadCanvasW = 800,
+                threadCanvasH = 460;
+            let threadCoordMap = new Map();
+            const threadCanvas = document.getElementById('threadCanvas');
+            const threadCtx = threadCanvas.getContext('2d');
+            const threadCanvasCard = document.getElementById('threadCanvasCard');
+            const threadCanvasBadge = document.getElementById('threadCanvasBadge');
+            const threadStepDesc = document.getElementById('threadStepDesc');
+            const threadStepProgress = document.getElementById('threadStepProgress');
+            const threadStepDots = document.getElementById('threadStepDots');
+            const threadTraversalResult = document.getElementById('threadTraversalResult');
+
+            function threadResetTree(node) { if (!node) return;
+                node.ltag = 0;
+                node.rtag = 0;
+                node.left = node._originalLeft;
+                node.right = node._originalRight; if (node.left) threadResetTree(node.left); if (node.right) threadResetTree(
+                    node.right);
+                node.isLeaf = !node._originalLeft && !node._originalRight; }
+
+            function threadCollectNodes(node) { const l = []; if (!node) return l;
+                l.push(node);
+                l.push(...threadCollectNodes(node.left));
+                l.push(...threadCollectNodes(node.right)); return l; }
+
+            function threadBuildSteps(root, type) {
+                threadAllSteps = [];
+                threadCoordMap.clear();
+                if (!root) return;
+                threadResetTree(root);
+                threadAllNodes = threadCollectNodes(root);
+
+                function snap(hlId, preId, desc, newThreads) {
+                    threadAllSteps.push({ highlightNodeId: hlId, preNodeId: preId, description: desc, newThreads: newThreads ||
+                            [], nodeStates: threadAllNodes.map(n => n.cloneSnapshot()) });
+                }
+                let pre = null;
+
+                function recThreads(node, threads) { if (threads.length > 0) { const parts = threads.map(t => t.type ===
+                            'left' ? `"${node.char}"左→前驱"${t.target.char}"` :
+                            `"${t.fromNode.char}"右→后继"${t.target.char}"`).join('；');
+                        snap(node.id, pre ? pre.id : null, '🔗 建立线索：' + parts, threads); } }
+
+                function inorderTh(node) { if (!node) return;
+                    inorderTh(node.left); const threads = []; if (!node.left && pre) { node.left = pre;
+                        node.ltag = 1;
+                        threads.push({ type: 'left', target: pre, fromNode: node }); } if (pre && !pre.right) { pre
+                            .right = node;
+                        pre.rtag = 1;
+                        threads.push({ type: 'right', target: node, fromNode: pre }); } if (threads.length > 0) recThreads(
+                        node, threads);
+                    snap(node.id, pre ? pre.id : null, `📍访问"${node.char}"` + (pre ? `，pre="${pre.char}"` : '，pre=null'), []);
+                    pre = node;
+                    inorderTh(node.right); }
+
+                function preorderTh(node) { if (!node) return; const threads = []; if (!node.left && pre) { node.left = pre;
+                        node.ltag = 1;
+                        threads.push({ type: 'left', target: pre, fromNode: node }); } if (pre && !pre.right) { pre
+                            .right = node;
+                        pre.rtag = 1;
+                        threads.push({ type: 'right', target: node, fromNode: pre }); } if (threads.length > 0) recThreads(
+                        node, threads);
+                    snap(node.id, pre ? pre.id : null, `📍访问"${node.char}"` + (pre ? `，pre="${pre.char}"` : '，pre=null'), []);
+                    pre = node; if (node.ltag === 0 && node.left) preorderTh(node.left); if (node.rtag === 0 && node.right)
+                        preorderTh(node.right); }
+
+                function postorderTh(node) { if (!node) return; if (node.ltag === 0 && node.left) postorderTh(node.left); if (
+                        node.rtag === 0 && node.right) postorderTh(node.right); const threads = []; if (!node.left && pre) {
+                        node.left = pre;
+                        node.ltag = 1;
+                        threads.push({ type: 'left', target: pre, fromNode: node }); } if (pre && !pre.right) { pre
+                            .right = node;
+                        pre.rtag = 1;
+                        threads.push({ type: 'right', target: node, fromNode: pre }); } if (threads.length > 0) recThreads(
+                        node, threads);
+                    snap(node.id, pre ? pre.id : null, `📍访问"${node.char}"` + (pre ? `，pre="${pre.char}"` : '，pre=null'), []);
+                    pre = node; }
+                snap(null, null, '🌲 初始二叉树，所有ltag=0,rtag=0。', []);
+                pre = null;
+                if (type === 'inorder') inorderTh(root);
+                else if (type === 'preorder') preorderTh(root);
+                else postorderTh(root);
+                const tc = threadAllNodes.reduce((s, n) => s + n.ltag + n.rtag, 0);
+                snap(null, null, `✅ 线索化完成！共建立${tc}条线索。`, []);
+            }
+
+            function threadGetDepth(node) { if (!node) return 0; return 1 + Math.max(threadGetDepth(node._originalLeft),
+                    threadGetDepth(node._originalRight)); }
+
+            function threadInorderIdx(node, counter) { if (!node) return;
+                threadInorderIdx(node._originalLeft, counter);
+                node._inorderIdx = counter.value++;
+                threadInorderIdx(node._originalRight, counter); }
+
+            function threadCalcLayout(root, cw, ch) {
+                const cm = new Map();
+                if (!root) return cm;
+                const counter = { value: 0 };
+                threadInorderIdx(root, counter);
+                const tn = counter.value;
+                const mx = 50,
+                    mt = 48,
+                    mb = 40;
+                const uw = cw - 2 * mx,
+                    uh = ch - mt - mb;
+                const d = threadGetDepth(root);
+                const lh = Math.min(85, uh / Math.max(d, 1));
+                const hs = tn > 1 ? uw / (tn - 1) : uw / 2;
+
+                function assign(node, cd) { if (!node) return;
+                    const x = tn > 1 ? mx + node._inorderIdx * hs : cw / 2;
+                    const y = mt + cd * lh;
+                    const r = !node._originalLeft && !node._originalRight ? 18 : 21;
+                    cm.set(node.id, { x, y, radius: r, node });
+                    assign(node._originalLeft, cd + 1);
+                    assign(node._originalRight, cd + 1); }
+                assign(root, 0);
+                return cm;
+            }
+
+            function setupThreadCanvas() {
+                const rect = threadCanvasCard.getBoundingClientRect();
+                const dpr = Math.min(window.devicePixelRatio || 1, 2);
+                const dw = Math.min(rect.width - 28, 900);
+                const dh = Math.max(420, Math.min(500, rect.width * 0.52));
+                threadCanvasW = Math.floor(dw * dpr);
+                threadCanvasH = Math.floor(dh * dpr);
+                threadCanvas.width = threadCanvasW;
+                threadCanvas.height = threadCanvasH;
+                threadCanvas.style.width = dw + 'px';
+                threadCanvas.style.height = dh + 'px';
+                threadCtx.setTransform(1, 0, 0, 1, 0, 0);
+                threadCtx.scale(dpr, dpr);
+            }
+
+            function threadGetLW() { return threadCanvasW / (Math.min(window.devicePixelRatio || 1, 2)); }
+
+            function threadGetLH() { return threadCanvasH / (Math.min(window.devicePixelRatio || 1, 2)); }
+
+            function threadDrawBg(lw, lh) { threadCtx.fillStyle = '#fdfdff';
+                threadCtx.fillRect(0, 0, lw, lh);
+                threadCtx.strokeStyle = '#f0f2f7';
+                threadCtx.lineWidth = 0.5; for (let x = 30; x < lw; x += 30) { threadCtx.beginPath();
+                    threadCtx.moveTo(x, 0);
+                    threadCtx.lineTo(x, lh);
+                    threadCtx.stroke(); } for (let y = 30; y < lh; y += 30) { threadCtx.beginPath();
+                    threadCtx.moveTo(0, y);
+                    threadCtx.lineTo(lw, y);
+                    threadCtx.stroke(); } }
+
+            function threadDrawStraightEdge(x1, y1, x2, y2, color, width, dashed) { threadCtx.save();
+                threadCtx.strokeStyle = color;
+                threadCtx.lineWidth = width;
+                threadCtx.lineCap = 'round'; if (dashed) threadCtx.setLineDash([7, 4]);
+                threadCtx.beginPath();
+                threadCtx.moveTo(x1, y1);
+                threadCtx.lineTo(x2, y2);
+                threadCtx.stroke();
+                threadCtx.setLineDash([]);
+                threadCtx.restore(); }
+
+            function threadDrawCurvedEdge(x1, y1, x2, y2, color, width, dashed) { threadCtx.save();
+                threadCtx.strokeStyle = color;
+                threadCtx.lineWidth = width;
+                threadCtx.lineCap = 'round'; if (dashed) threadCtx.setLineDash([7, 4]); const my = Math.min(y1, y2) - Math.max(
+                    Math.abs(y2 - y1) * 0.35, 22);
+                threadCtx.beginPath();
+                threadCtx.moveTo(x1, y1);
+                threadCtx.bezierCurveTo(x1, my, x2, my, x2, y2);
+                threadCtx.stroke();
+                threadCtx.setLineDash([]);
+                threadCtx.restore(); }
+
+            function threadDrawNode(x, y, r, node, ns, isHL, isPre) { threadCtx.save();
+                threadCtx.shadowColor = 'rgba(0,0,0,0.06)';
+                threadCtx.shadowBlur = 6;
+                threadCtx.shadowOffsetY = 2; let fc, sc; if (isHL) { fc = '#fffbf0';
+                    sc = '#f59e3b';
+                    threadCtx.shadowColor = 'rgba(245,158,59,0.35)'; } else if (isPre) { fc = '#f5f3ff';
+                    sc = '#8b5cf6'; } else if (ns && ns.isLeaf) { fc = '#e6f7f2';
+                    sc = '#48b89e'; } else { fc = '#eef0ff';
+                    sc = '#818cf8'; }
+                threadCtx.fillStyle = fc;
+                threadCtx.strokeStyle = sc;
+                threadCtx.lineWidth = isHL ? 3.2 : isPre ? 2.8 : 2.3;
+                threadCtx.beginPath();
+                threadCtx.arc(x, y, r, 0, Math.PI * 2);
+                threadCtx.fill();
+                threadCtx.stroke(); if (isHL) { threadCtx.strokeStyle = 'rgba(245,158,59,0.5)';
+                    threadCtx.lineWidth = 1.4;
+                    threadCtx.setLineDash([3, 4]);
+                    threadCtx.beginPath();
+                    threadCtx.arc(x, y, r + 6, 0, Math.PI * 2);
+                    threadCtx.stroke();
+                    threadCtx.setLineDash([]); }
+                threadCtx.restore();
+                threadCtx.save();
+                threadCtx.textAlign = 'center';
+                threadCtx.textBaseline = 'middle';
+                threadCtx.fillStyle = '#1a1f2e';
+                threadCtx.font = `bold ${Math.max(12,r*0.6)}px "PingFang SC",sans-serif`;
+                threadCtx.fillText(ns ? ns.char : node.char, x, y - 2); if (ns) { threadCtx.font =
+                        `${Math.max(8,r*0.35)}px "SF Mono",monospace`;
+                    threadCtx.fillStyle = ns.ltag === 1 ? '#ec4899' : '#94a3b8';
+                    threadCtx.fillText(`L:${ns.ltag}`, x - r * 0.5, y + r * 0.5);
+                    threadCtx.fillStyle = ns.rtag === 1 ? '#ec4899' : '#94a3b8';
+                    threadCtx.fillText(`R:${ns.rtag}`, x + r * 0.5, y + r * 0.5); }
+                threadCtx.restore(); }
+
+            function threadDrawStep(step) {
+                const lw = threadGetLW(),
+                    lh = threadGetLH();
+                threadDrawBg(lw, lh);
+                if (!threadTreeRoot) return;
+                const cm = threadCalcLayout(threadTreeRoot, lw, lh);
+                threadCoordMap = cm;
+                const nsMap = new Map();
+                if (step && step.nodeStates) step.nodeStates.forEach(s => nsMap.set(s.id, s));
+                const hlId = step ? step.highlightNodeId : null;
+                const preId = step ? step.preNodeId : null;
+                const newThreads = step ? step.newThreads : [];
+                const drawn = new Set();
+                for (const [, coord] of cm) {
+                    const ns = nsMap.get(coord.node.id);
+                    if (ns && ns.ltag === 0 && ns.leftId && cm.has(ns.leftId)) { const ek = `${coord.node.id}-${ns.leftId}`; if (
+                            !drawn.has(ek)) { drawn.add(ek);
+                            threadDrawStraightEdge(coord.x, coord.y, cm.get(ns.leftId).x, cm.get(ns.leftId).y,
+                                '#94a3b8', 2.1, false); } }
+                    if (ns && ns.rtag === 0 && ns.rightId && cm.has(ns.rightId)) { const ek =
+                        `${coord.node.id}-${ns.rightId}`; if (!drawn.has(ek)) { drawn.add(ek);
+                            threadDrawStraightEdge(coord.x, coord.y, cm.get(ns.rightId).x, cm.get(ns.rightId).y,
+                                '#94a3b8', 2.1, false); } }
+                    if (ns && ns.ltag === 1 && ns.leftId && cm.has(ns.leftId)) { const ek =
+                        `threadL-${coord.node.id}-${ns.leftId}`; if (!drawn.has(ek)) { drawn.add(ek); const isNew = newThreads
+                                .some(t => t.type === 'left' && t.fromNode && t.fromNode.id === coord.node.id);
+                            threadDrawCurvedEdge(coord.x, coord.y, cm.get(ns.leftId).x, cm.get(ns.leftId).y, isNew ?
+                                '#f43f5e' : '#ec4899', isNew ? 2.8 : 2, true); } }
+                    if (ns && ns.rtag === 1 && ns.rightId && cm.has(ns.rightId)) { const ek =
+                        `threadR-${coord.node.id}-${ns.rightId}`; if (!drawn.has(ek)) { drawn.add(ek); const isNew = newThreads
+                                .some(t => t.type === 'right' && t.fromNode && t.fromNode.id === coord.node.id);
+                            threadDrawCurvedEdge(coord.x, coord.y, cm.get(ns.rightId).x, cm.get(ns.rightId).y, isNew ?
+                                '#f43f5e' : '#ec4899', isNew ? 2.8 : 2, true); } }
+                }
+                for (const [, coord] of cm) {
+                    const ns = nsMap.get(coord.node.id);
+                    threadDrawNode(coord.x, coord.y, coord.radius, coord.node, ns, coord.node.id === hlId, coord.node
+                        .id === preId && coord.node.id !== hlId);
+                }
+            }
+
+            function threadDrawCurrentStep() {
+                setupThreadCanvas();
+                const lw = threadGetLW(),
+                    lh = threadGetLH();
+                threadCtx.clearRect(0, 0, lw, lh);
+                if (threadAllSteps.length === 0) { threadDrawBg(lw, lh);
+                    threadCtx.fillStyle = '#b0bcc8';
+                    threadCtx.font = '15px "PingFang SC",sans-serif';
+                    threadCtx.textAlign = 'center';
+                    threadCtx.fillText('请选择预设树和线索化类型', lw / 2, lh / 2);
+                    threadCanvasBadge.textContent = '空'; return; }
+                const isLast = threadStepIdx >= threadAllSteps.length - 1;
+                threadCanvasBadge.textContent = isLast ? '✅ 线索化完成' : threadStepIdx === 0 ? '🌲 初始二叉树' : '🧵 线索化中';
+                threadDrawStep(threadAllSteps[threadStepIdx]);
+            }
+
+            function threadGetTraversal(root, type) {
+                const seq = [];
+                const visited = new Set();
+
+                function inorderT(node) { if (!node || visited.has(node.id)) return; if (node.ltag === 0 && node.left)
+                        inorderT(node.left); if (!visited.has(node.id)) { seq.push(node.char);
+                        visited.add(node.id); } if (node.rtag === 0 && node.right) inorderT(node.right); }
+
+                function preorderT(node) { if (!node || visited.has(node.id)) return; if (!visited.has(node.id)) { seq.push(
+                        node.char);
+                        visited.add(node.id); } if (node.ltag === 0 && node.left) preorderT(node.left); if (node.rtag === 0 &&
+                        node.right) preorderT(node.right); }
+
+                function postorderT(node) { if (!node || visited.has(node.id)) return; if (node.ltag === 0 && node.left)
+                        postorderT(node.left); if (node.rtag === 0 && node.right) postorderT(node.right); if (!visited.has(
+                        node.id)) { seq.push(node.char);
+                        visited.add(node.id); } }
+                if (type === 'inorder') inorderT(root);
+                else if (type === 'preorder') preorderT(root);
+                else postorderT(root);
+                return seq;
+            }
+
+            function threadUpdateUI() {
+                if (threadAllSteps.length === 0) { threadStepDesc.innerHTML = '准备开始...';
+                    threadStepProgress.textContent = '步骤 0/0';
+                    threadCanvasBadge.textContent = '空';
+                    threadStepDots.innerHTML = '';
+                    threadTraversalResult.innerHTML = '<span style="color:#b0bcc8;">等待...</span>';
+                    threadUpdateButtons();
+                    threadDrawCurrentStep(); return; }
+                const step = threadAllSteps[threadStepIdx];
+                threadStepDesc.innerHTML = `<strong>步骤${threadStepIdx}</strong>：${step.description}`;
+                threadStepProgress.textContent = `步骤 ${threadStepIdx}/${threadAllSteps.length-1}`;
+                threadStepDots.innerHTML = '';
+                for (let i = 0; i < threadAllSteps.length; i++) { const dot = document.createElement('span');
+                    dot.className = 'step-dot'; if (i === threadStepIdx) dot.classList.add('active'); if (i < threadStepIdx)
+                        dot.classList.add('visited');
+                    dot.title = `步骤${i}`;
+                    dot.addEventListener('click', () => threadGoToStep(i));
+                    threadStepDots.appendChild(dot); }
+                const isComplete = threadStepIdx >= threadAllSteps.length - 1 && threadAllSteps.length > 1;
+                if (isComplete) { const seq = threadGetTraversal(threadTreeRoot, threadCurrentType);
+                    threadTraversalResult.innerHTML =
+                        `<strong>${threadCurrentType==='inorder'?'中序':threadCurrentType==='preorder'?'前序':'后序'}遍历：</strong><br><span style="font-size:1rem;color:#7c3aed;">${seq.join(' → ')}</span>`; } else if (
+                    threadStepIdx === 0) threadTraversalResult.innerHTML =
+                    '<span style="color:#b0bcc8;">线索化尚未开始...</span>';
+                else threadTraversalResult.innerHTML = '<span style="color:#b0bcc8;">线索化进行中...</span>';
+                threadUpdateButtons();
+                threadDrawCurrentStep();
+            }
+
+            function threadUpdateButtons() {
+                const t = threadAllSteps.length;
+                document.getElementById('threadBtnFirst').disabled = threadStepIdx === 0 || t === 0;
+                document.getElementById('threadBtnPrev').disabled = threadStepIdx === 0 || t === 0;
+                document.getElementById('threadBtnNext').disabled = threadStepIdx >= t - 1 || t === 0;
+                document.getElementById('threadBtnLast').disabled = threadStepIdx >= t - 1 || t === 0;
+                document.getElementById('threadBtnReset').disabled = t === 0;
+                document.getElementById('threadBtnPlay').disabled = t <= 1;
+            }
+
+            function threadGoToStep(i) { threadStepIdx = Math.max(0, Math.min(i, threadAllSteps.length - 1));
+                threadUpdateUI(); }
+
+            function threadStopPlay() { threadIsPlaying = false;
+                document.getElementById('threadBtnPlay').textContent = '▶';
+                document.getElementById('threadBtnPlay').classList.remove('playing');
+                clearTimeout(threadPlayTimer); }
+
+            function threadStartPlay() { if (threadIsPlaying || threadAllSteps.length <= 1) return;
+                threadIsPlaying = true;
+                document.getElementById('threadBtnPlay').textContent = '⏸';
+                document.getElementById('threadBtnPlay').classList.add('playing');
+                threadPlaySpeed = parseInt(document.getElementById('threadSpeedSelect').value) || 700;
+                threadAdvancePlay(); }
+
+            function threadAdvancePlay() { if (!threadIsPlaying || threadStepIdx >= threadAllSteps.length - 1) { threadStopPlay();
+                    return; }
+                threadGoToStep(threadStepIdx + 1); if (threadStepIdx >= threadAllSteps.length - 1) { threadStopPlay(); return; }
+                threadPlaySpeed = parseInt(document.getElementById('threadSpeedSelect').value) || 700;
+                threadPlayTimer = setTimeout(threadAdvancePlay, threadPlaySpeed); }
+
+            function threadTogglePlay() { if (threadIsPlaying) threadStopPlay(); else { if (threadStepIdx >= threadAllSteps
+                        .length - 1) { threadStepIdx = 0;
+                    threadUpdateUI(); }
+                threadStartPlay(); } }
+
+            function threadLoad(presetIdx, type) {
+                threadStopPlay();
+                threadCurrentPreset = presetIdx;
+                threadCurrentType = type;
+                threadTreeRoot = threadBuildTree(threadPresets[presetIdx].desc);
+                threadAllNodes = threadCollectNodes(threadTreeRoot);
+                threadBuildSteps(threadTreeRoot, type);
+                threadStepIdx = 0;
+                threadCoordMap.clear();
+                threadUpdateUI();
+                document.querySelectorAll('#threadPresetButtons .preset-btn').forEach((b, i) => b.classList.toggle(
+                    'active', i === presetIdx));
+                document.querySelectorAll('#threadTypeSelector .type-btn').forEach(b => b.classList.toggle('active', b
+                    .dataset.type === type));
+                showToast(
+                    `✅ 线索二叉树：已加载「${threadPresets[presetIdx].name}」· ${type==='inorder'?'中序':type==='preorder'?'前序':'后序'}线索化`);
+            }
+
+            document.getElementById('threadPresetButtons').addEventListener('click', e => { const b = e.target.closest(
+                    '.preset-btn'); if (!b) return;
+                const i = parseInt(b.dataset.preset); if (!isNaN(i) && i < threadPresets.length) threadLoad(i,
+                    threadCurrentType); });
+            document.getElementById('threadTypeSelector').addEventListener('click', e => { const b = e.target.closest(
+                    '.type-btn'); if (!b) return;
+                const t = b.dataset.type; if (t && ['inorder', 'preorder', 'postorder'].includes(t)) threadLoad(
+                    threadCurrentPreset, t); });
+            document.getElementById('threadBtnFirst').addEventListener('click', () => threadGoToStep(0));
+            document.getElementById('threadBtnPrev').addEventListener('click', () => threadGoToStep(threadStepIdx - 1));
+            document.getElementById('threadBtnNext').addEventListener('click', () => threadGoToStep(threadStepIdx + 1));
+            document.getElementById('threadBtnLast').addEventListener('click', () => threadGoToStep(threadAllSteps.length -
+                1));
+            document.getElementById('threadBtnReset').addEventListener('click', () => { threadStopPlay();
+                threadStepIdx = 0;
+                threadUpdateUI(); });
+            document.getElementById('threadBtnPlay').addEventListener('click', threadTogglePlay);
+            document.getElementById('threadSpeedSelect').addEventListener('change', () => { threadPlaySpeed = parseInt(
+                    document.getElementById('threadSpeedSelect').value) || 700; if (threadIsPlaying) { threadStopPlay();
+                    threadStartPlay(); } });
+
+            // ==================== 键盘快捷键(全局) ====================
+            document.addEventListener('keydown', e => {
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName ===
+                    'SELECT') return;
+                const getModule = () => {
+                    if (activeTab === 0) return {
+                        goTo: btreeGoToStep,
+                        toggle: btreeTogglePlay,
+                        reset: () => { btreeStopPlay();
+                            btreeStepIdx = 0;
+                            btreeUpdateUI(); },
+                        stepIdx: btreeStepIdx,
+                        allLen: btreeAllSteps.length
+                    };
+                    if (activeTab === 1) return {
+                        goTo: huffGoToStep,
+                        toggle: huffTogglePlay,
+                        reset: () => { huffStopPlay();
+                            huffStepIdx = 0;
+                            huffUpdateUI(); },
+                        stepIdx: huffStepIdx,
+                        allLen: huffAllSteps.length
+                    };
+                    return {
+                        goTo: threadGoToStep,
+                        toggle: threadTogglePlay,
+                        reset: () => { threadStopPlay();
+                            threadStepIdx = 0;
+                            threadUpdateUI(); },
+                        stepIdx: threadStepIdx,
+                        allLen: threadAllSteps.length
+                    };
+                };
+                const m = getModule();
+                switch (e.key) {
+                    case 'ArrowLeft':
+                        e.preventDefault();
+                        m.goTo(m.stepIdx - 1);
+                        break;
+                    case 'ArrowRight':
+                        e.preventDefault();
+                        m.goTo(m.stepIdx + 1);
+                        break;
+                    case 'Home':
+                        e.preventDefault();
+                        m.goTo(0);
+                        break;
+                    case 'End':
+                        e.preventDefault();
+                        m.goTo(m.allLen - 1);
+                        break;
+                    case ' ':
+                        e.preventDefault();
+                        m.toggle();
+                        break;
+                    case 'r':
+                    case 'R':
+                        if (!e.ctrlKey && !e.metaKey) { e.preventDefault();
+                            m.reset(); }
+                        break;
+                }
+            });
+
+            // ==================== 初始化 ====================
+            function initAll() {
+                setupBTreeCanvas();
+                btreeLoadPreset(0);
+                setupHuffCanvas();
+                huffLoadPreset(0);
+                setupThreadCanvas();
+                threadLoad(0, 'inorder');
+                btreeUpdateOrderHint();
+            }
+            initAll();
+            console.log('🌲 树结构算法可视化三部曲已就绪');
+            console.log('   📊 Tab1: B树构建 | 🌳 Tab2: 哈夫曼树 | 🧵 Tab3: 线索二叉树');
+            console.log('   ⌨ 快捷键：← → 切换步骤 | 空格 播放/暂停 | R 重置');
+        })();
+    </script>
+</body>
+</html>
